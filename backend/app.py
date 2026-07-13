@@ -1,6 +1,8 @@
-from flask import Flask
+from flask import Flask, request
 # IMPORT random so we can pick a phrase at random
 import random
+# import get_response from the llm adapter
+from llm_adapter import get_response
 # CREATE the app object - this is the Flask application itself
 app= Flask(__name__)
 # DEFINE a lookup: state name --> list of 4 phrases
@@ -25,6 +27,29 @@ def health():
     phrase = random.choice(HEALTH_RESPONSES["healthy"])
     # RETURN that phrase as the response, with HTTP status 200
     return phrase, 200
+
+# define a new route /chat/text that only accepts POST requests
+@app.route("/chat/text", methods=["POST"])
+
+def chat_text():
+    # GET the Json body sent in request
+    data = request.get_json()
+
+    # pull the "message" field out of that json
+    #(use .get() so it doesn't crash if "message" key is missing -- falls back to none instead)
+    message = data.get("message") if data else None
+
+    #if no message was actually sent
+    if not message:
+        # Return a error response with a 400 status (bad Status)
+        return {"error": "No message provided"}, 400
+
+    # otherwise, pass the message to the adapterr and get a respopnse back
+    reply = get_response(message)
+
+    # return that reply as json, with a 200 status
+    return {"response": reply}, 200
+
 # IF this file is run directly (not imported by something else)...
 if __name__=="__main__":
     #...START the flask dev server
