@@ -21,3 +21,18 @@ def write_api_key(key, env_path=".env"):
 
     with open(env_path, "w") as f:
         f.writelines(lines)
+
+def clear_api_key(env_path=".env"):
+    # Reads .env line by line, removes the ANTHROPIC_API_KEY line entirely
+    # if it exists. Leaves every other line untouched.
+    try:
+        with open(env_path, "r") as f:
+            lines = f.readlines()
+    except FileNotFoundError:
+        return  # nothing to clear if the file doesn't even exist
+
+    # KEEP every line except the one starting with ANTHROPIC_API_KEY=
+    remaining_lines = [line for line in lines if not line.startswith("ANTHROPIC_API_KEY=")]
+
+    with open(env_path, "w") as f:
+        f.writelines(remaining_lines)
