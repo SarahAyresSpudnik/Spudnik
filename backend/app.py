@@ -1,9 +1,20 @@
 from flask import Flask, request
 # IMPORT random so we can pick a phrase at random
 import random
+
+from dotenv import load_dotenv
+load_dotenv()
+
 # import get_response from the llm adapter
 from llm_adapter import get_response
+
+# import write_api_key from env_writer
+from env_writer import write_api_key
+
 # CREATE the app object - this is the Flask application itself
+from reviewer_mode import has_api_key
+from env_writer import clear_api_key
+
 app= Flask(__name__)
 # DEFINE a lookup: state name --> list of 4 phrases
 #only "healthy" matters for sub-issue 1
@@ -29,6 +40,34 @@ CHAT_ERROR_RESPONSES = {
         "Whatever that was, it's not getting through. Good effort though.",
         # Phase 4 from tater-health-responses.md
         "I know what you're trying to do. Adorable, but no.",
+    ]
+}
+SETUP_RESPONSES = {
+    'key_missing': [
+        # State 9 from tater-health-responses.md
+        "This one's coming out of your wallet, not mine — so hand over the key.",
+        "Your dime, your key. I just need you to actually type it in below.",
+        "Nobody's spending my money today — this is all you. Key goes below.",
+        "It's your bill racking up here, not mine. Let's get that key plugged in.",
+    ],
+    'key_saved': [
+        # State 9b from tater-health-responses.md
+        "Your key's in. Every token from here on out is coming out of your pocket.",
+        "Saved. That's your API bill ticking now, not mine.",
+        "Key's set. I hope you like the sound of money leaving your account.",
+        "Locked in. Enjoy watching your usage dashboard like a hawk.",
+    ],
+    'key_exists': [
+        "Already got a key on file. Somebody's money is already on the line.",
+        "There's a key saved already. Someone's account is already exposed to my nonsense.",
+        "A key's sitting here already, doing its job. Replace it or leave it be.",
+        "Key's already loaded. Somebody's already paying for this privilege.",
+    ],
+    'key_cleared': [
+        "Key's gone. Somebody's wallet just breathed a sigh of relief.",
+        "Cleared. No more key, no more spending. For now.",
+        "Removed. Whoever owned that key is off the hook.",
+        "Key's wiped. Back to broke and key-less.",
     ]
 }
     # other 7 states from the .md file go here eventually - not now
@@ -63,8 +102,58 @@ def chat_text():
     # return that reply as json, with a 200 status
     return {"response": reply}, 200
 
+@app.route("/setup", methods=["GET"])
+def setup_form():
+    # CHECK if a key is already saved
+    key_exists = has_api_key()
 
-# IF this file is run directly (not imported by something else)...
+    if key_exists:
+        # PICK a phrase acknowledging one's already on file
+        phrase = random.choice(SETUP_RESPONSES["key_exists"])
+        instructions = "A key is already saved. To replace it, type a new key below and click Save. To remove it entirely, leave the box empty and click Save."
+    else:
+        # PICK a phrase from key_missing, same as before
+        phrase = random.choice(SETUP_RESPONSES["key_missing"])
+        instructions = "Enter your Anthropic API key below and click Save."
+
+    return f"""
+    <p>{phrase}</p>
+    <p>{instructions}</p>
+    <form method="POST" action="/setup">
+        <label>Anthropic API Key:</label>
+        <input type="text" name="api_key">
+        <button type="submit">Save</button>
+    </form>
+    """
+@app.route("/setup", methods=["POST"])
+def setup_submit():
+    # GET the submitted form field (form POST, not JSON)
+    api_key = request.form.get("api_key")
+
+    # CHECK if a key already existed before this submission
+    key_existed = has_api_key()
+
+    if not api_key:
+        if key_existed:
+            # BLANK submission + a key existed = intentional clear, not an error
+            clear_api_key()
+            phrase = random.choice(SETUP_RESPONSES["key_cleared"])
+            return f"<p>{phrase}</p>", 200
+        else:
+            # BLANK submission + no key existed = actual mistake, keep the error
+            phrase = random.choice(SETUP_RESPONSES["key_missing"])
+            return f"<p>{phrase}</p><p>You didn't actually type anything in there.</p>", 400
+
+    # WRITE the key to .env (overwrites if one already existed)
+    write_api_key(api_key)
+    # WRITE the key to .env (overwrites if one already existed)
+    write_api_key(api_key)
+    # RELOAD .env into the environment so the new key is usable immediately
+    load_dotenv(override=True)
+    phrase = random.choice(SETUP_RESPONSES["key_saved"])
+    return f"<p>{phrase}</p>", 200
+    phrase = random.choice(SETUP_RESPONSES["key_saved"])
+    return f"<p>{phrase}</p>", 200
+
 if __name__=="__main__":
-    #...START the flask dev server
     app.run(debug=True, port=5000)
