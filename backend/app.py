@@ -15,6 +15,9 @@ from env_writer import write_api_key
 from reviewer_mode import has_api_key
 from env_writer import clear_api_key
 
+# import validate_api_key from key_validator
+from key_validator import validate_api_key
+
 app= Flask(__name__)
 # DEFINE a lookup: state name --> list of 4 phrases
 #only "healthy" matters for sub-issue 1
@@ -68,6 +71,30 @@ SETUP_RESPONSES = {
         "Cleared. No more key, no more spending. For now.",
         "Removed. Whoever owned that key is off the hook.",
         "Key's wiped. Back to broke and key-less.",
+    ],
+    'key_invalid_prefix': [
+        "Okay I know I'm delusional, but are you? That's not a key.",
+        "I might be running on a potato, but even I know that's not real.",
+        "Buddy. That's not shaped like anything Anthropic ever made.",
+        "I've seen a lot of nonsense, but that's a new low. Try again.",
+    ],
+    'key_too_short': [
+        "Where's the rest of it?",
+        "You call that a key? Feels like you're missing half of it.",
+        "That's suspiciously short. Keys don't come in fun-size.",
+        "Something's cut off. Copy the whole thing.",
+    ],
+    'key_too_long': [
+        "It's a key, not a book. Try less characters.",
+        "I don't need your whole life story, I just need a key.",
+        "Way too much going on here. Trim it down to an actual key.",
+        "You pasted something extra. This is not that long.",
+    ],
+    'key_invalid_characters': [
+        "Have you ever seen a key with that in it? Because I haven't.",
+        "That character doesn't belong in a key. I don't know what it belongs in.",
+        "Something in there looks like it escaped from somewhere else. Take it out.",
+        "I don't know what that symbol's doing there, but it's gotta go.",
     ]
 }
     # other 7 states from the .md file go here eventually - not now
@@ -144,14 +171,23 @@ def setup_submit():
             phrase = random.choice(SETUP_RESPONSES["key_missing"])
             return f"<p>{phrase}</p><p>You didn't actually type anything in there.</p>", 400
 
-    # WRITE the key to .env (overwrites if one already existed)
-    write_api_key(api_key)
+    # VALIDATE the key format before writing anything
+    is_valid, reason = validate_api_key(api_key)
+    if not is_valid:
+        # MAP the specific failure reason to its matching phrase list
+        response_key = {
+            "wrong_prefix": "key_invalid_prefix",
+            "too_short": "key_too_short",
+            "too_long": "key_too_long",
+            "invalid_characters": "key_invalid_characters",
+        }.get(reason, "key_invalid_prefix")  # fallback, shouldn't normally hit this
+        phrase = random.choice(SETUP_RESPONSES[response_key])
+        return f"<p>{phrase}</p>", 400
+
     # WRITE the key to .env (overwrites if one already existed)
     write_api_key(api_key)
     # RELOAD .env into the environment so the new key is usable immediately
     load_dotenv(override=True)
-    phrase = random.choice(SETUP_RESPONSES["key_saved"])
-    return f"<p>{phrase}</p>", 200
     phrase = random.choice(SETUP_RESPONSES["key_saved"])
     return f"<p>{phrase}</p>", 200
 
