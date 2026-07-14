@@ -63,6 +63,7 @@ def chat_text():
     # return that reply as json, with a 200 status
     return {"response": reply}, 200
 
+
 # IF this file is run directly (not imported by something else)...
 if __name__=="__main__":
     #...START the flask dev server
