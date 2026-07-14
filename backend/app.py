@@ -18,8 +18,20 @@ HEALTH_RESPONSES = {
         # Phase 4 from tater-health-responses.md
         "Systems fine. Emotionally, debatable.",
     ],
-    # other 7 states from the .md file go here eventually - not now
 }
+CHAT_ERROR_RESPONSES = {
+    'error_input': [
+        # Phase 1 from tater-health-responses.md
+        "That's not a message, that's an attack. I see you.",
+        # Phase 2 from tater-health-responses.md
+        "Nice try. I'm not falling for that one.",
+        # Phase 3 from tater-health-responses.md
+        "Whatever that was, it's not getting through. Good effort though.",
+        # Phase 4 from tater-health-responses.md
+        "I know what you're trying to do. Adorable, but no.",
+    ]
+}
+    # other 7 states from the .md file go here eventually - not now
 # DEFINE the /health route
 @app.route("/health")
 def health():
@@ -30,21 +42,22 @@ def health():
 
 # define a new route /chat/text that only accepts POST requests
 @app.route("/chat/text", methods=["POST"])
-
 def chat_text():
     # GET the Json body sent in request
     data = request.get_json()
 
     # pull the "message" field out of that json
-    #(use .get() so it doesn't crash if "message" key is missing -- falls back to none instead)
+    # (use .get() so it doesn't crash if "message" key is missing -- falls back to None instead)
     message = data.get("message") if data else None
 
-    #if no message was actually sent
+    # if no message was actually sent
     if not message:
-        # Return a error response with a 400 status (bad Status)
-        return {"error": "No message provided"}, 400
+        # PICK one random phrase from the error_input list
+        phrase = random.choice(CHAT_ERROR_RESPONSES["error_input"])
+        # RETURN it in the same shape as before, persona voice instead of flat string
+        return {"error": phrase}, 400
 
-    # otherwise, pass the message to the adapterr and get a respopnse back
+    # otherwise, pass the message to the adapter and get a response back
     reply = get_response(message)
 
     # return that reply as json, with a 200 status
