@@ -13,6 +13,9 @@ from env_writer import write_api_key
 
 # CREATE the app object - this is the Flask application itself
 from reviewer_mode import has_api_key
+
+from reviewer_mode import reviewer_status
+
 from env_writer import clear_api_key
 
 # import validate_api_key from key_validator
@@ -95,6 +98,12 @@ SETUP_RESPONSES = {
         "That character doesn't belong in a key. I don't know what it belongs in.",
         "Something in there looks like it escaped from somewhere else. Take it out.",
         "I don't know what that symbol's doing there, but it's gotta go.",
+    ],
+    'key_required_error': [
+        "No key, no chat. That's not a bug, that's just how money works.",
+        "You're trying to talk to me with nothing plugged in. Bold. Stupid, but bold.",
+        "If you can't figure out how to put in a key, go read the how-to page.",
+        "There's no key configured. I'm not doing this out of the goodness of my circuits.",
     ]
 }
     # other 7 states from the .md file go here eventually - not now
@@ -109,6 +118,11 @@ def health():
 # define a new route /chat/text that only accepts POST requests
 @app.route("/chat/text", methods=["POST"])
 def chat_text():
+    # if reviewer mode is on and no key's configured, refuse before touching the LLM adapter at all
+    status = reviewer_status()
+    if status["reviewer_mode"] and not status["key_present"]:
+        phrase = random.choice(SETUP_RESPONSES["key_required_error"])
+        return {"error": phrase}, 400
     # GET the Json body sent in request
     data = request.get_json()
 
@@ -191,5 +205,12 @@ def setup_submit():
     phrase = random.choice(SETUP_RESPONSES["key_saved"])
     return f"<p>{phrase}</p>", 200
 
+# get reviewer status once before deciding how to run
+status = reviewer_status()
+
+# reviewer mode locks to localhost regardless of future defaults;
+# normal mode stays open for phone/car clients later
+host = "127.0.0.1" if status["reviewer_mode"] else "0.0.0.0"
+
 if __name__=="__main__":
-    app.run(debug=True, port=5000)
+    app.run(host=host, debug=True, port=5000)
