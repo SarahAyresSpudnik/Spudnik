@@ -29,9 +29,21 @@ def get_response(message, mode="default"):
 
     # if Provider is set to claude
     elif provider == "claude":
-        # this is where real claude API logic goes later --
-        # system_prompt will need to be passed in here too, once that branch is built
-        return "STUB: claude path was called"
+        # import here, not at module top, so the ollama-only path never needs this installed
+        from anthropic import Anthropic
+        client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=1024,
+            system=system_prompt,
+            messages=[{"role": "user", "content": message}],
+        )
+        # pull the text out of the response's content blocks
+        reply = ""
+        for block in response.content:
+            if block.type == "text":
+                reply += block.text
+        return reply
 
     # if provider is set to something unrecognized
     else:
