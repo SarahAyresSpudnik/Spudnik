@@ -21,7 +21,15 @@ from env_writer import clear_api_key
 # import validate_api_key from key_validator
 from key_validator import validate_api_key
 
+# import init_db to create the sqlite tables
+from db import init_db
+
 app= Flask(__name__)
+
+# CREATE all tables if they don't already exist -- safe to run every
+# time the app starts, IF NOT EXISTS means it won't touch existing data
+init_db()
+
 # DEFINE a lookup: state name --> list of 4 phrases
 #only "healthy" matters for sub-issue 1
 HEALTH_RESPONSES = {
