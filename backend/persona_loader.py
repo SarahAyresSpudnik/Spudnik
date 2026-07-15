@@ -15,7 +15,6 @@ def build_system_prompt(mode="default"):
         "tater-lore.md",
         "tater-lexicon.md",
         "tater-media.md",
-        "tater-memory.md",
         "tater-hobbies.md",   # Sarah's actual hobbies/interests -- context about her, not Tater
     ]
 
