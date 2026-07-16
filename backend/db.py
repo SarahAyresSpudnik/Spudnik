@@ -73,3 +73,32 @@ def init_db():
 
     conn.commit()
     conn.close()
+    
+def get_recent_messages(session_id, limit=10):
+    # PULL the most recent messages for this session, oldest-first once
+    # returned, so they read in chronological order when handed to Claude.
+    # ORDER BY id DESC + LIMIT grabs the newest rows first, then we
+    # reverse them in Python so the final list is chronological.
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+        SELECT role, content
+        FROM messages
+        WHERE session_id = ?
+        ORDER BY id DESC
+        LIMIT ?
+        """,
+        (session_id, limit)
+    )
+    rows = cursor.fetchall()
+    conn.close()
+
+    # rows come back newest-first -- reverse so oldest is first,
+    # matching the order a real conversation actually happened in
+    rows.reverse()
+
+    # convert sqlite3.Row objects into plain dicts shaped like what
+    # the Anthropic API expects: {"role": ..., "content": ...}
+    return [{"role": row["role"], "content": row["content"]} for row in rows]

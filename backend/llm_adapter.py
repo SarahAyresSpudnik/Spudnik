@@ -6,7 +6,8 @@ from persona_loader import build_system_prompt
 
 from datetime import datetime, timezone
 
-from db import get_connection
+from db import get_connection, get_recent_messages
+
 
 # Define main funct every route will call
 def get_response(message, session_id, mode="default"):
@@ -36,11 +37,17 @@ def get_response(message, session_id, mode="default"):
     elif provider == "claude":
         from anthropic import Anthropic
         client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        # pull recent history for this session, then append the current
+        # message on the end -- history is what already happened,
+        # current message is what's happening now
+        history = get_recent_messages(session_id)
+        history.append({"role": "user", "content": message})
+
         response = client.messages.create(
             model="claude-haiku-4-5-20251001",
             max_tokens=5050,
             system=system_prompt,
-            messages=[{"role": "user", "content": message}],
+            messages=history,
         )
         reply = ""
         for block in response.content:
