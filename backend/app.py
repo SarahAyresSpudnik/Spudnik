@@ -1,6 +1,9 @@
-from flask import Flask, request
+import os
+from flask import Flask, request, session
 # IMPORT random so we can pick a phrase at random
 import random
+
+import uuid
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -25,6 +28,10 @@ from key_validator import validate_api_key
 from db import init_db
 
 app= Flask(__name__)
+
+# secret_key signs the session cookie -- required for flask.session to work at all.
+# Falls back to a dev placeholder if .env doesn't have one yet.
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-key-change-me")
 
 # CREATE all tables if they don't already exist -- safe to run every
 # time the app starts, IF NOT EXISTS means it won't touch existing data
@@ -131,6 +138,13 @@ def chat_text():
     if status["reviewer_mode"] and not status["key_present"]:
         phrase = random.choice(SETUP_RESPONSES["key_required_error"])
         return {"error": phrase}, 400
+    # GET or CREATE a session_id for this browser session.
+    # flask.session is a signed cookie -- persists across requests from
+    # the same browser, but is invisible to the user (no UI, no chat
+    # thread, just plumbing so Tater can find prior messages later).
+    if "session_id" not in session:
+        session["session_id"] = str(uuid.uuid4())
+    session_id = session["session_id"]
     # GET the Json body sent in request
     data = request.get_json()
 
@@ -146,7 +160,7 @@ def chat_text():
         return {"error": phrase}, 400
 
     # otherwise, pass the message to the adapter and get a response back
-    reply = get_response(message)
+    reply = get_response(message, session_id=session_id)
 
     # return that reply as json, with a 200 status
     return {"response": reply}, 200
