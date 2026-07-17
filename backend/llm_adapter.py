@@ -1,4 +1,5 @@
 import os
+from xmlrpc import client
 
 from reviewer_mode import is_reviewer_mode
 
@@ -42,9 +43,9 @@ def get_response(message, session_id, mode="default"):
         # current message is what's happening now
         history = get_recent_messages(session_id)
         history.append({"role": "user", "content": message})
-
+        print(f"DEBUG: using model = {os.getenv('CLAUDE_MODEL', 'claude-haiku-4-5-20251001')}") 
         response = client.messages.create(
-            model="claude-haiku-4-5-20251001",
+            model=os.getenv("CLAUDE_MODEL", "claude-haiku-4-5-20251001"),
             max_tokens=5050,
             system=system_prompt,
             messages=history,
