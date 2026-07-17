@@ -25,7 +25,8 @@ from env_writer import clear_api_key
 from key_validator import validate_api_key
 
 # import init_db to create the sqlite tables
-from db import init_db
+
+from db import init_db, write_memory_entry, find_memory_entry
 
 app= Flask(__name__)
 
@@ -119,7 +120,27 @@ SETUP_RESPONSES = {
         "You're trying to talk to me with nothing plugged in. Bold. Stupid, but bold.",
         "If you can't figure out how to put in a key, go read the how-to page.",
         "There's no key configured. I'm not doing this out of the goodness of my circuits.",
-    ]
+    ]    
+}
+MEMORY_RESPONSES = {
+    'log_saved': [
+        "Logged. Don't make me regret remembering that.",
+        "Got it. Filed away in the part of my brain that actually works.",
+        "Noted and stored. Try not to contradict yourself later.",
+        "Locked in. That's on the record now.",
+    ],
+    'recall_found': [
+        "Oh, you actually want this back? Fine. {summary}",
+        "Ugh, here: {summary}. Happy now?",
+        "I remembered it so you wouldn't have to. {summary}. You're welcome, I guess.",
+        "Dragging this back up against my will: {summary}",
+    ],
+    'recall_not_found': [
+        "Nothing. Shocking, since you probably never actually told me.",
+        "Came up empty. Maybe try saying things out loud next time.",
+        "I've got nothing. Either you didn't log it, or I just don't care enough to keep it.",
+        "Blank. Whatever that was, it wasn't worth my storage space apparently.",
+    ],
 }
     # other 7 states from the .md file go here eventually - not now
 # DEFINE the /health route
@@ -158,6 +179,24 @@ def chat_text():
         phrase = random.choice(CHAT_ERROR_RESPONSES["error_input"])
         # RETURN it in the same shape as before, persona voice instead of flat string
         return {"error": phrase}, 400
+
+    # CHECK for the memory-write trigger before anything else --
+    # short-circuits before get_response(), never touches the LLM or messages table
+    if message.lower().startswith("log that"):
+        summary = message[len("log that"):].strip(" .")
+        write_memory_entry(category="decision", summary=summary)
+        phrase = random.choice(MEMORY_RESPONSES["log_saved"])
+        return {"response": phrase}, 200
+
+    # CHECK for the memory-recall trigger
+    if message.lower().startswith("remember that"):
+        keyword = message[len("remember that"):].strip(" .")
+        result = find_memory_entry(keyword)
+        if result:
+            phrase = random.choice(MEMORY_RESPONSES["recall_found"]).format(summary=result)
+        else:
+            phrase = random.choice(MEMORY_RESPONSES["recall_not_found"])
+        return {"response": phrase}, 200
 
     # otherwise, pass the message to the adapter and get a response back
     reply = get_response(message, session_id=session_id)
