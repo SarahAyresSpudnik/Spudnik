@@ -1,5 +1,6 @@
 import sqlite3
 import os
+from datetime import datetime, timezone
 
 # Resolves to backend/spudnik.db, same directory-independent pattern
 # persona_loader.py uses for the persona folder.
@@ -102,3 +103,40 @@ def get_recent_messages(session_id, limit=10):
     # convert sqlite3.Row objects into plain dicts shaped like what
     # the Anthropic API expects: {"role": ..., "content": ...}
     return [{"role": row["role"], "content": row["content"]} for row in rows]
+
+def write_memory_entry(category, summary, related_project=None):
+    # Inserts a single memory_entries row. related_project stays
+    # NULL unless explicitly passed in -- no auto-parsing of project
+    # names for now, keeps this deterministic.
+    conn = get_connection()
+    cursor = conn.cursor()
+    now = datetime.now(timezone.utc).isoformat()
+
+    cursor.execute(
+        "INSERT INTO memory_entries (category, summary, related_project, date) VALUES (?, ?, ?, ?)",
+        (category, summary, related_project, now)
+    )
+    conn.commit()
+    conn.close()
+
+
+def find_memory_entry(keyword):
+    # Simple LIKE match against summary -- case-insensitive since
+    # SQLite's LIKE is case-insensitive by default for ASCII text.
+    # Returns the single most recent match, or None if nothing hits.
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+        SELECT summary FROM memory_entries
+        WHERE summary LIKE ?
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (f"%{keyword}%",)
+    )
+    row = cursor.fetchone()
+    conn.close()
+
+    return row["summary"] if row else None
