@@ -1,0 +1,91 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Spudnik — Logs</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tokens/fonts.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tokens/colors.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tokens/typography.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tokens/spacing.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+<style>
+  .logs-page{max-width:840px;margin:0 auto;padding:32px 24px 64px}
+  .logs-header{display:flex;align-items:baseline;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:16px;margin-bottom:24px}
+  .logs-title{font:var(--text-headline-sm);color:var(--amber);margin:0}
+  .back-link{font:var(--text-label);color:var(--sage);text-decoration:none}
+  .session{background:var(--surface-card);border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin-bottom:20px}
+  .session.pinned{border-color:var(--amber);background:var(--amber-dim)}
+  .session.pinned + .session:not(.pinned){margin-top:24px;position:relative}
+  .session.pinned + .session:not(.pinned)::before{content:"";position:absolute;top:-12px;left:0;right:0;border-top:1px solid var(--border)}
+  .session-header{display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:12px;font:var(--text-code);color:var(--text-secondary)}
+  .session-title{display:flex;align-items:center;gap:10px;min-width:0}
+  .session-name{color:var(--amber);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pin-icon{font-size:16px;color:var(--amber);flex-shrink:0;font-variation-settings:'FILL' 1}
+  .session-meta{flex-shrink:0;white-space:nowrap}
+  .rename-btn{background:none;border:1px solid var(--border);color:var(--text-secondary);font:var(--text-code);font-size:11px;padding:2px 8px;border-radius:4px;cursor:pointer;flex-shrink:0}
+  .continue-link{flex-shrink:0;border:1px solid var(--sage);color:var(--sage);font:var(--text-code);font-size:11px;padding:2px 10px;border-radius:4px;text-decoration:none}
+  .message{display:flex;gap:10px;padding:6px 0;font:var(--text-body-sm)}
+  .message .role{flex-shrink:0;width:70px;font:var(--text-label-caps);letter-spacing:.05em}
+  .message.user .role{color:var(--sage)}
+  .message.assistant .role{color:var(--amber)}
+  .message .content{white-space:pre-wrap;color:var(--text-primary)}
+  .empty-state{color:var(--text-secondary);text-align:center;padding:48px 0;font:var(--text-body-md)}
+</style>
+</head>
+<body>
+<div class="logs-page">
+  <div class="logs-header">
+    <h1 class="logs-title">&gt; SESSION LOGS</h1>
+    <a class="back-link" href="/dashboard">&larr; back to dashboard</a>
+  </div>
+
+  {% if sessions %}
+    {% for entry in sessions %}
+    <div class="session{{ ' pinned' if entry.pinned else '' }}">
+      <div class="session-header">
+        <div class="session-title">
+          {% if entry.pinned %}
+          <span class="material-symbols-outlined pin-icon" title="Pinned">push_pin</span>
+          {% endif %}
+          <span class="session-name" data-session-name="{{ entry.session_id }}">{{ entry.name }}</span>
+          <button class="rename-btn" data-rename="{{ entry.session_id }}">Rename</button>
+        </div>
+        <div class="session-title">
+          <span class="session-meta">{{ entry.message_count }} messages · started {{ entry.started_at }}</span>
+          <a class="continue-link" href="/dashboard?session={{ entry.session_id }}">Continue &rarr;</a>
+        </div>
+      </div>
+      {% for m in entry.messages %}
+      <div class="message {{ m.role }}">
+        <span class="role">{{ m.role }}</span>
+        <span class="content">{{ m.content }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  {% else %}
+    <p class="empty-state">No chat history yet. Say something on the dashboard and it'll show up here.</p>
+  {% endif %}
+</div>
+<script>
+document.querySelectorAll('.rename-btn').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    var sessionId = btn.getAttribute('data-rename');
+    var nameEl = document.querySelector('.session-name[data-session-name="' + sessionId + '"]');
+    var next = window.prompt('Rename this session:', nameEl.textContent);
+    if (!next || !next.trim() || next.trim() === nameEl.textContent) return;
+    fetch('/api/sessions/' + encodeURIComponent(sessionId), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: next.trim() })
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.name) nameEl.textContent = data.name;
+      });
+  });
+});
+</script>
+</body>
+</html>

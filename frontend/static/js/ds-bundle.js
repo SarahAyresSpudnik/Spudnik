@@ -398,89 +398,111 @@ const {
   TerminalInput,
   Badge
 } = window.SpudnikDesignSystem_8bfd55;
-function buildPixelStyles(grid, legend, unit) {
-  const rows = grid.length,
-    cols = grid[0].length;
-  const shadows = [];
-  grid.forEach((row, r) => {
-    for (let c = 0; c < row.length; c++) {
-      const ch = row[c];
-      if (ch === '.') continue;
-      shadows.push(`${c * unit}px ${r * unit}px 0 0 ${legend[ch]}`);
-    }
+function NewsTicker({
+  newsData,
+  onOpenHardware
+}) {
+  const items = [];
+  (newsData || []).forEach(source => {
+    (source.items || []).forEach(item => {
+      items.push({
+        source: source.source,
+        title: item.title,
+        summary: item.summary
+      });
+    });
   });
-  return {
-    outer: {
-      width: cols * unit,
-      height: rows * unit,
-      position: 'relative'
-    },
-    inner: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      width: unit,
-      height: unit,
-      background: 'transparent',
-      boxShadow: shadows.join(',')
-    }
+  const wrapStyle = {
+    flex: 1,
+    minHeight: 0,
+    marginTop: 16,
+    display: 'flex',
+    flexDirection: 'column',
+    border: '1px solid var(--amber)',
+    borderRadius: 8,
+    background: 'var(--bg)',
+    overflow: 'hidden'
   };
-}
-const rougeGrid = ['..R....R..', '.RR....RR.', '.RRRRRRRR.', 'RRRRRRRRRR', 'RRDRRRRDRR', 'RRRRRRRRRR', 'RRRRRRRRRR', '.RRRRRRRR.', '.RR....RR.', '..R....R..'];
-const mageGrid = ['..........', 'P........P', 'PP......PP', 'PPPPPPPPPP', 'PPDPPPPDPP', 'PPPPPPPPPP', 'PPPPPPPPPP', 'PPPPPPPPPP', '.PPPPPPPP.', '..........'];
-function CatDogDen() {
-  const rouge = buildPixelStyles(rougeGrid, {
-    R: 'var(--error)',
-    D: 'var(--bg-void)'
-  }, 3);
-  const mage = buildPixelStyles(mageGrid, {
-    P: 'var(--potato)',
-    D: 'var(--bg-void)'
-  }, 3);
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: 'auto',
-      paddingTop: 16
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      border: '1px solid var(--amber)',
-      borderRadius: 8,
-      background: 'var(--bg)',
-      padding: 10,
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 8
-    }
-  }, /*#__PURE__*/React.createElement("div", {
+  const headerEl = /*#__PURE__*/React.createElement("div", {
     style: {
       font: 'var(--text-label-caps)',
       color: 'var(--amber)',
       letterSpacing: '.05em',
       borderBottom: '1px solid var(--border)',
-      paddingBottom: 6
+      padding: '8px 10px',
+      flexShrink: 0
     }
-  }, "DEN"), /*#__PURE__*/React.createElement("div", {
+  }, "TECH NEWS");
+  if (!items.length) {
+    return /*#__PURE__*/React.createElement("div", {
+      style: wrapStyle
+    }, headerEl, /*#__PURE__*/React.createElement("p", {
+      style: {
+        font: 'var(--text-code)',
+        fontSize: 11,
+        color: 'var(--text-secondary)',
+        margin: 0,
+        padding: '10px'
+      }
+    }, "No news yet."));
+  }
+  // Duplicate the list once so a -50% translateY loops seamlessly --
+  // works regardless of item count/height since the percentage is
+  // relative to the (doubled) track's own height.
+  const track = [...items, ...items];
+  const duration = Math.max(24, items.length * 5) + 's';
+  return /*#__PURE__*/React.createElement("div", {
+    style: wrapStyle,
+    className: "news-ticker-wrap"
+  }, headerEl, /*#__PURE__*/React.createElement("div", {
     style: {
-      display: 'flex',
-      alignItems: 'flex-end',
-      justifyContent: 'center',
-      gap: 10,
-      padding: '4px 0'
+      flex: 1,
+      minHeight: 0,
+      overflow: 'hidden',
+      position: 'relative'
     }
   }, /*#__PURE__*/React.createElement("div", {
-    style: rouge.outer
-  }, /*#__PURE__*/React.createElement("span", {
-    style: rouge.inner
-  })), /*#__PURE__*/React.createElement("div", {
-    style: mage.outer
-  }, /*#__PURE__*/React.createElement("span", {
-    style: mage.inner
-  })))));
+    className: "news-ticker-track",
+    style: {
+      animationDuration: duration
+    }
+  }, track.map((item, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    onClick: onOpenHardware,
+    style: {
+      cursor: 'pointer',
+      padding: '8px 10px',
+      borderBottom: '1px solid var(--border)'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      font: 'var(--text-label-caps)',
+      fontSize: 10,
+      color: 'var(--sage)',
+      letterSpacing: '.04em'
+    }
+  }, item.source), /*#__PURE__*/React.createElement("div", {
+    style: {
+      font: 'var(--text-body-sm)',
+      fontSize: 12,
+      color: 'var(--text-primary)',
+      marginTop: 2
+    }
+  }, item.title), /*#__PURE__*/React.createElement("div", {
+    style: {
+      font: 'var(--text-code)',
+      fontSize: 11,
+      color: 'var(--text-secondary)',
+      marginTop: 2
+    }
+  }, item.summary)))), /*#__PURE__*/React.createElement("style", null, `@keyframes news-ticker-scroll{0%{transform:translateY(0)}100%{transform:translateY(-50%)}}.news-ticker-track{animation-name:news-ticker-scroll;animation-timing-function:linear;animation-iteration-count:infinite}.news-ticker-wrap:hover .news-ticker-track{animation-play-state:paused}`)));
 }
 function Sidebar({
   activeTab,
-  onNavigate
+  onNavigate,
+  onReboot,
+  statusLine,
+  newsData
 }) {
   const items = [{
     icon: 'psychology',
@@ -492,18 +514,24 @@ function Sidebar({
     icon: 'security',
     label: 'Protocols'
   }, {
-    icon: 'code',
-    label: 'Terminal'
+    icon: 'settings',
+    label: 'Settings'
   }, {
     icon: 'memory',
     label: 'Hardware'
   }];
   const footer = [{
     icon: 'list_alt',
-    label: 'Logs'
+    label: 'Logs',
+    onClick: () => {
+      window.location.href = '/logs';
+    }
   }, {
     icon: 'help_outline',
-    label: 'Help'
+    label: 'Help',
+    onClick: () => {
+      window.location.href = '/help';
+    }
   }];
   return /*#__PURE__*/React.createElement("nav", {
     style: {
@@ -524,14 +552,16 @@ function Sidebar({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       font: 'var(--text-headline-sm)',
-      color: 'var(--amber)'
+      color: 'var(--amber)',
+      lineHeight: 1.3
     }
-  }, "TATER_V1"), /*#__PURE__*/React.createElement("div", {
+  }, "POTATO V2 SPUDNIK VARIANT"), /*#__PURE__*/React.createElement("div", {
     style: {
       font: 'var(--text-label-caps)',
-      color: 'var(--sage)'
+      color: 'var(--sage)',
+      marginTop: 4
     }
-  }, "STATUS: NOMINAL")), /*#__PURE__*/React.createElement("div", {
+  }, statusLine)), /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1,
       display: 'flex',
@@ -544,11 +574,15 @@ function Sidebar({
   }, i, {
     active: activeTab === i.label,
     onClick: () => onNavigate(i.label)
-  }))), /*#__PURE__*/React.createElement(CatDogDen, null)), /*#__PURE__*/React.createElement("div", {
+  }))), /*#__PURE__*/React.createElement(NewsTicker, {
+    newsData: newsData,
+    onOpenHardware: () => onNavigate('Hardware')
+  })), /*#__PURE__*/React.createElement("div", {
     style: {
       padding: '0 16px'
     }
   }, /*#__PURE__*/React.createElement("button", {
+    onClick: onReboot,
     style: {
       width: '100%',
       textAlign: 'left',
@@ -609,14 +643,53 @@ function Orb() {
     style: {
       width: 220,
       height: 220,
-      borderRadius: '50%',
-      background: 'radial-gradient(circle at 38% 32%, #FFD9BC 0%, var(--amber-hover) 22%, var(--amber) 50%, #7A3712 78%, #3a1a08 100%)',
-      boxShadow: '0 0 60px rgba(232,135,76,.35)',
-      animation: 'pulse 4s ease-in-out infinite'
+      position: 'relative'
     }
-  }), /*#__PURE__*/React.createElement("style", null, `@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}`));
+  }, /*#__PURE__*/React.createElement(window.OriginkitParticleSphere, {
+    sphereColor: 'var(--amber, #E8874C)'
+  })));
 }
-function RootBeerGauge() {
+function rootBeerLevel(fraction, hasData) {
+  // Mug scale is borrowed from tater-lexicon.md's Time table -- reused here
+  // as an urgency scale for remaining reserves instead of task duration.
+  if (!hasData) return {
+    headline: "Full Tank",
+    badgeText: "No calls yet",
+    tone: "sage"
+  };
+  if (fraction > 0.66) return {
+    headline: "One Mug",
+    badgeText: "Reserves healthy",
+    tone: "sage"
+  };
+  if (fraction > 0.33) return {
+    headline: "Two Mugs",
+    badgeText: "Keep an eye on it",
+    tone: "amber"
+  };
+  if (fraction > 0.1) return {
+    headline: "Three Mugs",
+    badgeText: "Running low",
+    tone: "amber"
+  };
+  return {
+    headline: "Root Beer Emergency",
+    badgeText: "Root Beer Emergency",
+    tone: "error"
+  };
+}
+function RootBeerGauge({
+  limit,
+  remaining
+}) {
+  // Claude-only, per scope -- Ollama has no equivalent gauge yet.
+  // No Claude call this session (limit/remaining still null) defaults to
+  // a full mug rather than reading as broken/zero.
+  const hasData = limit != null && remaining != null && Number(limit) > 0;
+  const fraction = hasData ? Math.max(0, Math.min(1, Number(remaining) / Number(limit))) : 1;
+  const pct = Math.round(fraction * 100);
+  const level = rootBeerLevel(fraction, hasData);
+  const subtitle = hasData ? `${pct}% of the token budget left this window.` : "No Claude calls yet this session. Reserves untouched.";
   return /*#__PURE__*/React.createElement(Card, {
     title: "Root Beer Reserves"
   }, /*#__PURE__*/React.createElement("div", {
@@ -641,7 +714,7 @@ function RootBeerGauge() {
       bottom: 0,
       left: 0,
       width: '100%',
-      height: '85%',
+      height: `${pct}%`,
       background: 'rgba(232,135,76,.8)'
     }
   }, /*#__PURE__*/React.createElement("div", {
@@ -661,215 +734,870 @@ function RootBeerGauge() {
       font: 'var(--text-headline-sm)',
       color: 'var(--amber)'
     }
-  }, "Three Mugs"), /*#__PURE__*/React.createElement(Badge, {
-    tone: "error"
-  }, "Root Beer Emergency"), /*#__PURE__*/React.createElement("span", {
+  }, level.headline), /*#__PURE__*/React.createElement(Badge, {
+    tone: level.tone
+  }, level.badgeText), /*#__PURE__*/React.createElement("span", {
     style: {
       font: 'var(--text-code)',
       fontSize: 12,
       color: 'var(--text-secondary)'
     }
-  }, "Stress level critical. Refill required."))));
+  }, subtitle))));
 }
-const logs = ['[14:02:11] Compiled module auth_v2.', '[14:05:43] Incoming request from subnet 10.0.*', '[14:10:00] Reviewer syntax check: PASSED.', '[14:15:22] Awaiting input...'];
-function RecentActivityCard() {
+function continueSession(sessionId) {
+  window.location.href = `/dashboard?session=${encodeURIComponent(sessionId)}`;
+}
+function RecentActivityCard({
+  sessions,
+  onRename,
+  onPin,
+  onDelete
+}) {
+  const items = sessions || [];
+  function handleDelete(sessionId, name) {
+    if (!window.confirm(`Delete "${name}"? It'll disappear from Logs, Recent Activity, and Continue -- same care as Reboot System's confirm.`)) return;
+    onDelete(sessionId);
+  }
   return /*#__PURE__*/React.createElement(Card, {
     title: "Recent Activity"
-  }, /*#__PURE__*/React.createElement("ul", {
+  }, items.length ? /*#__PURE__*/React.createElement("ul", {
     style: {
       listStyle: 'none',
       margin: 0,
       padding: 0,
       display: 'flex',
       flexDirection: 'column',
-      gap: 8,
-      font: 'var(--text-code)',
-      color: 'var(--text-secondary)'
+      gap: 10
     }
-  }, logs.map((l, i) => /*#__PURE__*/React.createElement("li", {
-    key: i,
+  }, items.slice(0, 6).map((s, i) => {
+    const shown = items.slice(0, 6);
+    const isLastPinned = s.pinned && (i === shown.length - 1 || !shown[i + 1].pinned);
+    const padSide = s.pinned ? 8 : 0;
+    return /*#__PURE__*/React.createElement("li", {
+      key: s.session_id,
+      style: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 6,
+        background: s.pinned ? 'var(--amber-dim)' : 'transparent',
+        borderRadius: s.pinned ? 6 : 0,
+        paddingTop: s.pinned ? 6 : 0,
+        paddingLeft: padSide,
+        paddingRight: padSide,
+        paddingBottom: isLastPinned ? 10 : s.pinned ? 6 : 10,
+        marginBottom: isLastPinned ? 4 : 0,
+        borderBottom: isLastPinned ? '1px solid var(--amber)' : i < shown.length - 1 ? '1px solid var(--border)' : 'none'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 8
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        minWidth: 0,
+        flex: 1
+      }
+    }, /*#__PURE__*/React.createElement(PinIcon, {
+      pinned: s.pinned,
+      onClick: () => onPin(s.session_id, !s.pinned),
+      size: 14
+    }), /*#__PURE__*/React.createElement(SessionNameEditor, {
+      name: s.name,
+      onRename: name => onRename(s.session_id, name),
+      size: 12
+    })), /*#__PURE__*/React.createElement("span", {
+      className: "material-symbols-outlined",
+      onClick: () => handleDelete(s.session_id, s.name),
+      title: "Delete session",
+      style: {
+        cursor: 'pointer',
+        fontSize: 15,
+        color: 'var(--error)',
+        flexShrink: 0
+      }
+    }, "delete")), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        font: 'var(--text-code)',
+        fontSize: 11,
+        color: 'var(--text-secondary)'
+      }
+    }, `${s.message_count} message${s.message_count === 1 ? '' : 's'}`), /*#__PURE__*/React.createElement("button", {
+      onClick: () => continueSession(s.session_id),
+      style: {
+        flexShrink: 0,
+        padding: '4px 12px',
+        border: '1px solid var(--sage)',
+        background: 'transparent',
+        color: 'var(--sage)',
+        font: 'var(--text-code)',
+        fontSize: 11,
+        cursor: 'pointer',
+        borderRadius: 4
+      }
+    }, "Continue")));
+  })) : /*#__PURE__*/React.createElement("p", {
+    style: {
+      font: 'var(--text-body-sm)',
+      color: 'var(--text-secondary)',
+      textAlign: 'center',
+      padding: '24px 0',
+      margin: 0
+    }
+  }, "No sessions yet. Say something and it'll show up here."));
+}
+const DEVICE_STATUS_OPTIONS = [{
+  value: 'link_active',
+  label: 'Link Active',
+  dotStatus: 'success'
+}, {
+  value: 'standby',
+  label: 'Standby',
+  dotStatus: 'idle'
+}, {
+  value: 'disconnected',
+  label: 'Disconnected',
+  dotStatus: 'error'
+}];
+function deviceStatusMeta(status) {
+  return DEVICE_STATUS_OPTIONS.find(o => o.value === status) || DEVICE_STATUS_OPTIONS[1];
+}
+// Current Claude model set -- verified against Anthropic's model catalog,
+// kept in sync with CLAUDE_MODEL_CHOICES in backend/app.py.
+const CLAUDE_MODEL_OPTIONS = [{
+  value: 'claude-opus-4-8',
+  label: 'Claude Opus 4.8'
+}, {
+  value: 'claude-sonnet-5',
+  label: 'Claude Sonnet 5'
+}, {
+  value: 'claude-haiku-4-5-20251001',
+  label: 'Claude Haiku 4.5'
+}];
+const keyButtonStyle = {
+  padding: '8px 16px',
+  border: '1px solid var(--amber)',
+  background: 'transparent',
+  color: 'var(--amber)',
+  font: 'var(--text-label)',
+  cursor: 'pointer',
+  borderRadius: 4
+};
+const keyButtonDangerStyle = {
+  padding: '8px 16px',
+  border: '1px solid var(--error)',
+  background: 'transparent',
+  color: 'var(--error)',
+  font: 'var(--text-label)',
+  cursor: 'pointer',
+  borderRadius: 4
+};
+const keyButtonGhostStyle = {
+  padding: '8px 16px',
+  border: '1px solid var(--border)',
+  background: 'transparent',
+  color: 'var(--text-secondary)',
+  font: 'var(--text-label)',
+  cursor: 'pointer',
+  borderRadius: 4
+};
+function PinIcon({
+  pinned,
+  onClick,
+  size
+}) {
+  return /*#__PURE__*/React.createElement("span", {
+    className: "material-symbols-outlined",
+    onClick: onClick,
+    title: pinned ? 'Unpin session' : 'Pin session',
+    style: {
+      cursor: 'pointer',
+      fontSize: size || 16,
+      color: pinned ? 'var(--amber)' : 'var(--text-secondary)',
+      fontVariationSettings: pinned ? "'FILL' 1" : "'FILL' 0",
+      flexShrink: 0
+    }
+  }, "push_pin");
+}
+function SessionNameEditor({
+  name,
+  onRename,
+  size
+}) {
+  const [editing, setEditing] = React.useState(false);
+  const [value, setValue] = React.useState(name || '');
+  React.useEffect(() => {
+    setValue(name || '');
+  }, [name]);
+  function save() {
+    setEditing(false);
+    const trimmed = value.trim();
+    if (trimmed && trimmed !== name) onRename(trimmed);else setValue(name || '');
+  }
+  if (editing) {
+    return /*#__PURE__*/React.createElement("input", {
+      autoFocus: true,
+      value: value,
+      onChange: e => setValue(e.target.value),
+      onBlur: save,
+      onKeyDown: e => {
+        if (e.key === 'Enter') save();
+        if (e.key === 'Escape') {
+          setValue(name || '');
+          setEditing(false);
+        }
+      },
+      style: {
+        background: 'var(--bg-void)',
+        border: '1px solid var(--amber)',
+        color: 'var(--text-primary)',
+        font: 'var(--text-code)',
+        fontSize: size || 12,
+        padding: '2px 6px',
+        borderRadius: 4,
+        minWidth: 0,
+        flex: 1
+      }
+    });
+  }
+  return /*#__PURE__*/React.createElement("span", {
+    onClick: () => setEditing(true),
+    title: "Click to rename",
+    style: {
+      cursor: 'pointer',
+      font: 'var(--text-code)',
+      fontSize: size || 12,
+      color: 'var(--text-secondary)',
+      borderBottom: '1px dashed var(--border-strong)',
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis'
+    }
+  }, name);
+}
+function ApiKeyCard({
+  keyPresent,
+  onChanged
+}) {
+  const [mode, setMode] = React.useState('view');
+  const [value, setValue] = React.useState('');
+  const [message, setMessage] = React.useState('');
+  const [busy, setBusy] = React.useState(false);
+  const showForm = !keyPresent || mode === 'replace';
+  function submitKey() {
+    if (!value.trim() || busy) return;
+    setBusy(true);
+    fetch('/api/key', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        api_key: value
+      })
+    }).then(r => r.json().then(data => ({
+      ok: r.ok,
+      data
+    }))).then(({
+      ok,
+      data
+    }) => {
+      setBusy(false);
+      setMessage(data.response || data.error || '');
+      if (ok) {
+        setValue('');
+        setMode('view');
+        onChanged();
+      }
+    }).catch(() => {
+      setBusy(false);
+      setMessage("Couldn't reach the backend. Try again.");
+    });
+  }
+  function deactivate() {
+    if (busy) return;
+    setBusy(true);
+    fetch('/api/key/deactivate', {
+      method: 'POST'
+    }).then(r => r.json()).then(data => {
+      setBusy(false);
+      setMessage(data.response || '');
+      setMode('view');
+      onChanged();
+    }).catch(() => setBusy(false));
+  }
+  return /*#__PURE__*/React.createElement(Card, {
+    title: "API Key Status"
+  }, showForm ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("input", {
+    type: "password",
+    value: value,
+    onChange: e => setValue(e.target.value),
+    placeholder: "sk-ant-...",
+    style: {
+      width: '100%',
+      background: 'var(--bg-void)',
+      border: '1px solid var(--border)',
+      color: 'var(--text-primary)',
+      font: 'var(--text-code)',
+      padding: 8,
+      borderRadius: 4,
+      marginBottom: 8,
+      boxSizing: 'border-box'
+    }
+  }), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
-      gap: 8,
-      opacity: i === logs.length - 1 ? 0.5 : 1
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: submitKey,
+    disabled: busy,
+    style: keyButtonStyle
+  }, keyPresent ? "Save New Key" : "Connect Key"), keyPresent ? /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setMode('view');
+      setMessage('');
+      setValue('');
+    },
+    style: keyButtonGhostStyle
+  }, "Cancel") : null)) : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: 'var(--bg-void)',
+      border: '1px solid var(--border)',
+      padding: 8,
+      borderRadius: 4,
+      display: 'flex',
+      justifyContent: 'space-between',
+      font: 'var(--text-code)'
     }
   }, /*#__PURE__*/React.createElement("span", {
     style: {
-      color: i === 2 ? 'var(--sage)' : 'var(--amber)'
+      letterSpacing: 4,
+      opacity: 0.75
     }
-  }, ">"), l))));
+  }, "sk-****-****-XXXX"), /*#__PURE__*/React.createElement("span", {
+    className: "material-symbols-outlined",
+    style: {
+      color: 'var(--border-strong)'
+    }
+  }, "visibility_off")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 8,
+      marginTop: 8
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setMode('replace'),
+    style: keyButtonStyle
+  }, "Replace Key"), /*#__PURE__*/React.createElement("button", {
+    onClick: deactivate,
+    disabled: busy,
+    style: keyButtonDangerStyle
+  }, "Deactivate Key"))), message ? /*#__PURE__*/React.createElement("p", {
+    style: {
+      font: 'var(--text-code)',
+      fontSize: 11,
+      color: 'var(--sage)',
+      margin: '8px 0 0'
+    }
+  }, message) : null);
 }
-const protocolDefs = [{
-  id: 'file-creation',
-  title: 'File-Creation Gate',
-  filename: 'tater-protocol-file-creation.md',
-  summary: 'Checks before Tater is allowed to write a new file to disk.'
-}, {
-  id: 'squirrel',
-  title: 'Squirrel Protocol',
-  filename: 'tater-protocol-squirrel.md',
-  summary: 'Handles topic derailment — when to let a tangent run and when to snap back.'
-}, {
-  id: 'handoff',
-  title: 'Handoff Protocol',
-  filename: 'tater-protocol-handoff.md',
-  summary: 'Rules for passing a task to another agent or tool mid-session.'
-}, {
-  id: 'persona-scope',
-  title: 'Persona-Scope Protocol',
-  filename: 'tater-protocol-persona-scope.md',
-  summary: 'Keeps the sarcasm module from bleeding into safety-critical responses.'
-}, {
-  id: 'agent-research',
-  title: 'Agent-Research Protocol',
-  filename: 'tater-protocol-agent-research.md',
-  summary: 'Governs when Tater is allowed to go fetch outside information on its own.'
-}];
-const memoryEntries = [{
-  content: "User asked me to stop narrating the weather in haiku form. Filed under: requests I will selectively honor.",
-  timestamp: "2026-07-17 23:41"
-}, {
-  content: "Determined that \"left the stove on\" was said sarcastically. Threat level: none. Confidence: 62%.",
-  timestamp: "2026-07-17 19:02"
-}, {
-  content: "User's coffee order changed to oat milk. Updating world model accordingly.",
-  timestamp: "2026-07-16 08:15"
-}, {
-  content: "Reminded user to reboot after the driver update. User ignored me. As expected.",
-  timestamp: "2026-07-14 21:30"
-}];
-const devices = [{
-  name: 'Lazarus',
-  category: 'DESKTOP',
-  spec: 'i9-12900KF · RTX 3090',
-  role: 'Primary dev / Ollama machine · Claude Code installed',
-  aside: 'where the thinking actually happens',
-  active: true,
-  dotStatus: 'success',
-  dotLabel: 'LINK ACTIVE'
-}, {
-  name: 'OmniBook X Flip 16',
-  category: 'LAPTOP',
-  spec: 'Intel Core Ultra · CPU-only',
-  role: 'Demo / presentation device',
-  aside: '',
-  active: false,
-  dotStatus: 'idle',
-  dotLabel: 'STANDBY'
-}, {
-  name: 'The Brick',
-  category: 'HANDHELD',
-  spec: 'Ayn Thor Pro',
-  role: 'Handheld',
-  aside: '',
-  active: false,
-  dotStatus: 'idle',
-  dotLabel: 'STANDBY'
-}];
-const newsFeed = [{
-  title: 'Local inference gets cheaper',
-  summary: 'Stub entry — sourcing for this feed (live pull vs. manually logged) not yet decided.',
-  timestamp: '2026-07-17'
-}, {
-  title: 'New handheld APU benchmarks',
-  summary: 'Stub entry — mock content only, no live source wired.',
-  timestamp: '2026-07-15'
-}, {
-  title: 'VR headset firmware update',
-  summary: 'Stub entry — placeholder until news sourcing is confirmed.',
-  timestamp: '2026-07-13'
-}];
-function mockReply(cmd) {
-  const c = cmd.trim().toLowerCase();
-  if (!c) return 'No input received.';
-  if (c === 'help') return 'Commands: status, db.check, llm.switch <provider>, help';
-  if (c === 'status') return 'STATUS: NOMINAL // uptime 4h12m // mock data';
-  if (c === 'db.check') return 'DB connection: mock OK (no live query executed).';
-  if (c.startsWith('llm.switch')) return 'Provider switch not wired yet — stub only.';
-  return 'Command not recognized. (No backend endpoint wired — mock response.)';
+const deviceInputStyle = {
+  width: '100%',
+  background: 'var(--bg-void)',
+  border: '1px solid var(--border)',
+  color: 'var(--text-primary)',
+  font: 'var(--text-code)',
+  padding: 8,
+  borderRadius: 4,
+  marginBottom: 8,
+  boxSizing: 'border-box'
+};
+function DeviceForm({
+  initial,
+  submitLabel,
+  onSubmit,
+  onCancel
+}) {
+  const [form, setForm] = React.useState(initial);
+  function field(key) {
+    return {
+      value: form[key] || '',
+      onChange: e => setForm(f => ({
+        ...f,
+        [key]: e.target.value
+      }))
+    };
+  }
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("input", _extends({
+    placeholder: "Name"
+  }, field('name'), {
+    style: deviceInputStyle
+  })), /*#__PURE__*/React.createElement("input", _extends({
+    placeholder: "Category (e.g. DESKTOP, LAPTOP, HANDHELD)"
+  }, field('category'), {
+    style: deviceInputStyle
+  })), /*#__PURE__*/React.createElement("input", _extends({
+    placeholder: "Spec"
+  }, field('spec'), {
+    style: deviceInputStyle
+  })), /*#__PURE__*/React.createElement("input", _extends({
+    placeholder: "Role"
+  }, field('role'), {
+    style: deviceInputStyle
+  })), /*#__PURE__*/React.createElement("input", _extends({
+    placeholder: "Aside (optional flavor line)"
+  }, field('aside'), {
+    style: deviceInputStyle
+  })), /*#__PURE__*/React.createElement("select", _extends({}, field('status'), {
+    style: deviceInputStyle
+  }), DEVICE_STATUS_OPTIONS.map(opt => /*#__PURE__*/React.createElement("option", {
+    key: opt.value,
+    value: opt.value
+  }, opt.label))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => onSubmit(form),
+    style: keyButtonStyle
+  }, submitLabel), onCancel ? /*#__PURE__*/React.createElement("button", {
+    onClick: onCancel,
+    style: keyButtonGhostStyle
+  }, "Cancel") : null));
+}
+function DeviceCard({
+  device,
+  onChanged
+}) {
+  const [editing, setEditing] = React.useState(false);
+  const meta = deviceStatusMeta(device.status);
+  function patch(fields) {
+    fetch(`/api/devices/${device.id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(fields)
+    }).then(() => onChanged());
+  }
+  function del() {
+    if (!window.confirm(`Delete ${device.name}? This can't be undone.`)) return;
+    fetch(`/api/devices/${device.id}`, {
+      method: 'DELETE'
+    }).then(() => onChanged());
+  }
+  if (editing) {
+    return /*#__PURE__*/React.createElement(Card, {
+      title: `Edit — ${device.name}`,
+      icon: "memory",
+      accent: "amber"
+    }, /*#__PURE__*/React.createElement(DeviceForm, {
+      initial: device,
+      submitLabel: "Save",
+      onCancel: () => setEditing(false),
+      onSubmit: form => {
+        patch(form);
+        setEditing(false);
+      }
+    }));
+  }
+  return /*#__PURE__*/React.createElement(Card, {
+    title: device.name,
+    icon: "memory",
+    accent: "amber"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      gap: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 6
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      font: 'var(--text-label-caps)',
+      color: 'var(--sage)',
+      letterSpacing: '.05em'
+    }
+  }, device.category), /*#__PURE__*/React.createElement("span", {
+    style: {
+      font: 'var(--text-body-sm)',
+      color: 'var(--text-primary)'
+    }
+  }, device.spec), /*#__PURE__*/React.createElement("span", {
+    style: {
+      font: 'var(--text-body-sm)',
+      color: 'var(--text-secondary)'
+    }
+  }, device.role), device.aside ? /*#__PURE__*/React.createElement("span", {
+    style: {
+      font: 'var(--text-code)',
+      fontSize: 12,
+      color: 'var(--sage)',
+      fontStyle: 'italic'
+    }
+  }, device.aside) : null), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'flex-end',
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement(StatusDot, {
+    status: meta.dotStatus,
+    label: meta.label,
+    glow: device.status === 'link_active'
+  }), /*#__PURE__*/React.createElement("select", {
+    value: device.status,
+    onChange: e => patch({
+      status: e.target.value
+    }),
+    style: {
+      background: 'var(--bg-void)',
+      border: '1px solid var(--border)',
+      color: 'var(--text-primary)',
+      font: 'var(--text-code)',
+      fontSize: 11,
+      padding: 4,
+      borderRadius: 4
+    }
+  }, DEVICE_STATUS_OPTIONS.map(opt => /*#__PURE__*/React.createElement("option", {
+    key: opt.value,
+    value: opt.value
+  }, opt.label))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 6
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setEditing(true),
+    style: { ...keyButtonGhostStyle,
+      padding: '4px 10px',
+      fontSize: 11
+    }
+  }, "Edit"), /*#__PURE__*/React.createElement("button", {
+    onClick: del,
+    style: { ...keyButtonDangerStyle,
+      padding: '4px 10px',
+      fontSize: 11
+    }
+  }, "Delete")))));
+}
+function AddDeviceCard({
+  onChanged
+}) {
+  const [open, setOpen] = React.useState(false);
+  if (!open) {
+    return /*#__PURE__*/React.createElement("button", {
+      onClick: () => setOpen(true),
+      style: {
+        width: '100%',
+        textAlign: 'center',
+        padding: '12px 16px',
+        border: '1px dashed var(--border-strong)',
+        background: 'transparent',
+        color: 'var(--sage)',
+        font: 'var(--text-label)',
+        cursor: 'pointer',
+        borderRadius: 8
+      }
+    }, "+ Add Device");
+  }
+  return /*#__PURE__*/React.createElement(Card, {
+    title: "Add Device",
+    icon: "memory",
+    accent: "amber"
+  }, /*#__PURE__*/React.createElement(DeviceForm, {
+    initial: {
+      name: '',
+      category: '',
+      spec: '',
+      role: '',
+      aside: '',
+      status: 'standby'
+    },
+    submitLabel: "Add",
+    onCancel: () => setOpen(false),
+    onSubmit: form => {
+      if (!form.name || !form.name.trim()) return;
+      fetch('/api/devices', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(form)
+      }).then(() => {
+        setOpen(false);
+        onChanged();
+      });
+    }
+  }));
 }
 function DashboardApp() {
   const [activeTab, setActiveTab] = React.useState('Presence');
   const [expanded, setExpanded] = React.useState({});
-  const [terminalValue, setTerminalValue] = React.useState('');
-  const [mockProviderActive, setMockProviderActive] = React.useState(false);
-  const [reviewerOn, setReviewerOn] = React.useState(false);
-  const [reviewerRuntime, setReviewerRuntime] = React.useState('ollama');
-  const [keyConnected, setKeyConnected] = React.useState(false);
-  const [claudeModel, setClaudeModel] = React.useState('claude-sonnet-5');
-  const [scrollback, setScrollback] = React.useState([{
-    isResponse: true,
-    text: '// mock console — backend not yet wired to llm_adapter.py. Responses below are stubbed.'
-  }]);
-  const scrollRef = React.useRef(null);
+  const [sidebarStatus, setSidebarStatus] = React.useState(null);
+  const [chatMessages, setChatMessages] = React.useState([]);
+  const [chatValue, setChatValue] = React.useState('');
+  const [chatBusy, setChatBusy] = React.useState(false);
+  const [sessionsList, setSessionsList] = React.useState([]);
+  const [currentSession, setCurrentSession] = React.useState({
+    session_id: null,
+    name: '',
+    pinned: false
+  });
+  const [memoryData, setMemoryData] = React.useState({
+    entries: [],
+    stats: {
+      total_entries: 0,
+      last_write: null
+    }
+  });
+  const [protocolsData, setProtocolsData] = React.useState({
+    protocols: [],
+    active_count: 0
+  });
+  const [devicesList, setDevicesList] = React.useState([]);
+  const [newsData, setNewsData] = React.useState([]);
+  function refreshStatus() {
+    fetch('/api/sidebar-status').then(r => r.json()).then(setSidebarStatus).catch(() => {});
+  }
+  function refreshSessions() {
+    fetch('/api/sessions').then(r => r.json()).then(data => setSessionsList(data.sessions || [])).catch(() => {});
+  }
+  function refreshMemory() {
+    fetch('/api/memory').then(r => r.json()).then(setMemoryData).catch(() => {});
+  }
+  function refreshProtocols() {
+    fetch('/api/protocols').then(r => r.json()).then(setProtocolsData).catch(() => {});
+  }
+  function handleProtocolToggle(filename, enabled) {
+    fetch(`/api/protocols/${encodeURIComponent(filename)}/toggle`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        enabled
+      })
+    }).then(() => refreshProtocols());
+  }
+  function handleProtocolsBulkToggle(enabled) {
+    fetch('/api/protocols/bulk', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        enabled
+      })
+    }).then(() => refreshProtocols());
+  }
+  function refreshDevices() {
+    fetch('/api/devices').then(r => r.json()).then(data => setDevicesList(data.devices || [])).catch(() => {});
+  }
+  function refreshNews() {
+    fetch('/api/news').then(r => r.json()).then(data => setNewsData(data.sources || [])).catch(() => {});
+  }
+  function refreshCurrentSession() {
+    return fetch('/api/session/current').then(r => r.json()).then(data => {
+      setChatMessages(data.messages || []);
+      setCurrentSession({
+        session_id: data.session_id,
+        name: data.name,
+        pinned: data.pinned
+      });
+      return data;
+    }).catch(() => {});
+  }
+  // Shared rename/pin/delete -- used by both Presence's current-session
+  // control and RecentActivityCard's per-row management, so there's one
+  // code path hitting /api/sessions/<id> rather than two.
+  function renameSessionApi(sessionId, name) {
+    return fetch(`/api/sessions/${encodeURIComponent(sessionId)}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        name
+      })
+    }).then(() => {
+      refreshSessions();
+      if (sessionId === currentSession.session_id) refreshCurrentSession();
+    });
+  }
+  function pinSessionApi(sessionId, pinned) {
+    return fetch(`/api/sessions/${encodeURIComponent(sessionId)}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        pinned
+      })
+    }).then(() => {
+      refreshSessions();
+      if (sessionId === currentSession.session_id) refreshCurrentSession();
+    });
+  }
+  function deleteSessionApi(sessionId) {
+    return fetch(`/api/sessions/${encodeURIComponent(sessionId)}`, {
+      method: 'DELETE'
+    }).then(() => {
+      refreshSessions();
+    });
+  }
   React.useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [scrollback]);
+    refreshStatus();
+    refreshSessions();
+    refreshMemory();
+    refreshProtocols();
+    refreshDevices();
+    refreshNews();
+    refreshCurrentSession();
+  }, []);
+  function handleChatSubmit() {
+    const message = chatValue;
+    if (!message.trim() || chatBusy) return;
+    setChatBusy(true);
+    setChatValue('');
+    fetch('/chat/text', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        message
+      })
+    }).then(r => r.json().then(data => ({
+      ok: r.ok,
+      data
+    }))).then(({
+      ok,
+      data
+    }) => {
+      setChatBusy(false);
+      if (ok) {
+        setChatMessages(m => [...m, {
+          role: 'user',
+          content: message
+        }, {
+          role: 'assistant',
+          content: data.response
+        }]);
+        refreshStatus();
+        refreshSessions();
+        refreshMemory();
+        refreshCurrentSession();
+      } else {
+        setChatMessages(m => [...m, {
+          role: 'assistant',
+          content: data.error || "Something went wrong and I don't want to talk about it."
+        }]);
+      }
+    }).catch(() => {
+      setChatBusy(false);
+    });
+  }
+  const provider = sidebarStatus && sidebarStatus.provider ? sidebarStatus.provider.active : null;
+  const providerConnected = sidebarStatus && sidebarStatus.provider ? sidebarStatus.provider.connected : false;
+  const reviewerOn = sidebarStatus ? sidebarStatus.reviewer_mode : false;
+  const claudeModel = sidebarStatus ? sidebarStatus.model : '';
+  const keyPresent = sidebarStatus ? sidebarStatus.key_present : false;
+  const rateLimit = sidebarStatus ? sidebarStatus.rate_limit : {};
+  function handleModelChange(model) {
+    fetch('/api/model', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model
+      })
+    }).then(() => refreshStatus());
+  }
+  function handleReviewerToggle(enabled) {
+    fetch('/api/reviewer-mode', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        enabled
+      })
+    }).then(() => refreshStatus());
+  }
+  function handleReboot() {
+    if (!window.confirm('Reboot System will deactivate the current API key. Continue?')) return;
+    fetch('/api/reboot', {
+      method: 'POST'
+    }).then(() => refreshStatus());
+  }
   const isPresence = activeTab === 'Presence';
   const isMemory = activeTab === 'Memory';
   const isProtocols = activeTab === 'Protocols';
-  const isTerminal = activeTab === 'Terminal';
+  const isSettings = activeTab === 'Settings';
   const isHardware = activeTab === 'Hardware';
+  const memoryEntries = memoryData.entries;
   const hasEntries = memoryEntries.length > 0;
+  // Reflects whichever provider/model is genuinely active right now --
+  // same provider/providerConnected values that drive the LLM Provider
+  // card, not a second detection mechanism.
+  let providerSegment = 'NO PROVIDER';
+  if (provider === 'claude' && providerConnected) {
+    const modelOpt = CLAUDE_MODEL_OPTIONS.find(o => o.value === claudeModel);
+    providerSegment = (modelOpt ? modelOpt.label : 'CLAUDE').toUpperCase();
+  } else if (provider === 'ollama' && providerConnected) {
+    providerSegment = 'OLLAMA';
+  }
+  const sidebarStatusLine = provider === 'claude' && providerConnected ? 'STATUS: BORROWED BRAIN' : provider === 'ollama' && providerConnected ? 'STATUS: MY BRAIN' : 'STATUS: BRAINLESS';
   let headerTitle = 'Spudnik_Presence',
-    headerSubtitle = 'SYS.MONITOR // VER 1.0.4 // LOCAL_HOST';
+    headerSubtitle = `SYS.MONITOR // ${providerSegment} // LOCAL_HOST`;
   if (isMemory) {
     headerTitle = 'Spudnik_Memory';
-    headerSubtitle = 'MEM.INDEX // VER 1.0.4 // LOCAL_HOST';
+    headerSubtitle = `MEM.INDEX // ${providerSegment} // LOCAL_HOST`;
   }
   if (isProtocols) {
     headerTitle = 'Spudnik_Protocols';
-    headerSubtitle = 'RULESET // VER 1.0.4 // LOCAL_HOST';
+    headerSubtitle = `RULESET // ${providerSegment} // LOCAL_HOST`;
   }
-  if (isTerminal) {
-    headerTitle = 'Spudnik_Terminal';
-    headerSubtitle = 'CONSOLE // VER 1.0.4 // LOCAL_HOST';
+  if (isSettings) {
+    headerTitle = 'Spudnik_Settings';
+    headerSubtitle = `CONFIG // ${providerSegment} // LOCAL_HOST`;
   }
   if (isHardware) {
     headerTitle = 'Spudnik_Hardware';
-    headerSubtitle = 'DEVICES // VER 1.0.4 // LOCAL_HOST';
-  }
-  function handleTerminalSubmit() {
-    const cmd = terminalValue;
-    if (!cmd.trim()) return;
-    setScrollback(s => [...s, {
-      isCommand: true,
-      text: cmd
-    }, {
-      isResponse: true,
-      text: mockReply(cmd)
-    }]);
-    setTerminalValue('');
+    headerSubtitle = `DEVICES // ${providerSegment} // LOCAL_HOST`;
   }
   function renderPresence() {
-    const claudeCardStyle = mockProviderActive ? {
+    const claudeCardStyle = provider !== 'claude' ? {
       opacity: 0.45,
       pointerEvents: 'none'
     } : {
       opacity: 1
     };
-    const ollamaBtnStyle = {
-      flex: 1,
-      padding: '6px 12px',
-      font: 'var(--text-label)',
-      fontSize: 12,
-      cursor: 'pointer',
-      borderRadius: 4,
-      border: `1px solid ${reviewerRuntime === 'ollama' ? 'var(--amber)' : 'var(--border)'}`,
-      background: reviewerRuntime === 'ollama' ? 'var(--amber-dim)' : 'transparent',
-      color: reviewerRuntime === 'ollama' ? 'var(--amber)' : 'var(--text-secondary)'
-    };
-    const claudeBtnStyle = {
-      flex: 1,
-      padding: '6px 12px',
-      font: 'var(--text-label)',
-      fontSize: 12,
-      cursor: 'pointer',
-      borderRadius: 4,
-      border: `1px solid ${reviewerRuntime === 'claude' ? 'var(--amber)' : 'var(--border)'}`,
-      background: reviewerRuntime === 'claude' ? 'var(--amber-dim)' : 'transparent',
-      color: reviewerRuntime === 'claude' ? 'var(--amber)' : 'var(--text-secondary)'
-    };
+    const providerLabel = provider === 'claude' ? 'Claude' : 'Ollama (Local)';
+    const lastReply = [...chatMessages].reverse().find(m => m.role === 'assistant');
+    const quoteText = lastReply ? lastReply.content : "I'm not saying I'm bored, but I just computed pi to the last digit twice.";
     return /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'grid',
@@ -893,7 +1621,25 @@ function DashboardApp() {
         font: 'var(--text-headline-sm)',
         margin: 0
       }
-    }, "\"I'm not saying I'm bored, but I just computed pi to the last digit twice.\"")), /*#__PURE__*/React.createElement(TerminalInput, null)), /*#__PURE__*/React.createElement("div", {
+    }, `"${quoteText}"`)), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        padding: '0 2px'
+      }
+    }, /*#__PURE__*/React.createElement(PinIcon, {
+      pinned: currentSession.pinned,
+      onClick: () => pinSessionApi(currentSession.session_id, !currentSession.pinned)
+    }), /*#__PURE__*/React.createElement(SessionNameEditor, {
+      name: currentSession.name,
+      onRename: name => renameSessionApi(currentSession.session_id, name)
+    })), /*#__PURE__*/React.createElement(TerminalInput, {
+      value: chatValue,
+      onChange: e => setChatValue(e.target.value),
+      onSubmit: handleChatSubmit,
+      placeholder: chatBusy ? 'Thinking...' : 'Talk to Tater...'
+    })), /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         flexDirection: 'column',
@@ -903,7 +1649,7 @@ function DashboardApp() {
       title: "LLM Provider",
       icon: "memory",
       accent: "amber"
-    }, mockProviderActive ? /*#__PURE__*/React.createElement("div", {
+    }, providerConnected ? /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         alignItems: 'center',
@@ -922,7 +1668,7 @@ function DashboardApp() {
         font: 'var(--text-headline-md)',
         color: 'var(--amber)'
       }
-    }, "Ollama (Local)")) : /*#__PURE__*/React.createElement("div", {
+    }, providerLabel)) : /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         alignItems: 'center',
@@ -941,35 +1687,15 @@ function DashboardApp() {
         color: 'var(--text-secondary)',
         fontStyle: 'italic'
       }
-    }, "No provider selected. I'm just sitting here.")), mockProviderActive ? /*#__PURE__*/React.createElement("p", {
-      style: {
-        font: 'var(--text-code)',
-        color: 'var(--text-secondary)',
-        margin: 0,
-        fontSize: 12
-      }
-    }, "Latency: 12ms | VRAM: 8.4GB/12GB") : null, /*#__PURE__*/React.createElement("button", {
-      onClick: () => setMockProviderActive(v => !v),
-      style: {
-        background: 'none',
-        border: 'none',
-        color: 'var(--sage)',
-        font: 'var(--text-code)',
-        fontSize: 11,
-        cursor: 'pointer',
-        padding: 0,
-        textAlign: 'left',
-        marginTop: 4
-      }
-    }, `[ preview: ${mockProviderActive ? 'show empty state' : 'show active state'} ]`)), /*#__PURE__*/React.createElement(Card, {
+    }, "No provider selected. I'm just sitting here."))), /*#__PURE__*/React.createElement(Card, {
       title: "Claude Model",
       icon: "smart_toy",
       accent: "amber",
       style: claudeCardStyle
     }, /*#__PURE__*/React.createElement("select", {
       value: claudeModel,
-      onChange: e => setClaudeModel(e.target.value),
-      disabled: mockProviderActive,
+      onChange: e => handleModelChange(e.target.value),
+      disabled: provider !== 'claude',
       style: {
         width: '100%',
         background: 'var(--bg-void)',
@@ -979,13 +1705,10 @@ function DashboardApp() {
         padding: 8,
         borderRadius: 4
       }
-    }, /*#__PURE__*/React.createElement("option", {
-      value: "claude-sonnet-5"
-    }, "claude-sonnet-5"), /*#__PURE__*/React.createElement("option", {
-      value: "claude-opus-4"
-    }, "claude-opus-4"), /*#__PURE__*/React.createElement("option", {
-      value: "claude-haiku-4"
-    }, "claude-haiku-4")), mockProviderActive ? /*#__PURE__*/React.createElement("p", {
+    }, CLAUDE_MODEL_OPTIONS.map(opt => /*#__PURE__*/React.createElement("option", {
+      key: opt.value,
+      value: opt.value
+    }, opt.label))), provider !== 'claude' ? /*#__PURE__*/React.createElement("p", {
       style: {
         font: 'var(--text-code)',
         fontSize: 11,
@@ -994,71 +1717,21 @@ function DashboardApp() {
       }
     }, "Disabled while Ollama is active.") : null), /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement(Toggle, {
       checked: reviewerOn,
-      onChange: setReviewerOn,
+      onChange: handleReviewerToggle,
       label: "Reviewer Mode",
-      description: "Strict syntax validation"
-    }), reviewerOn ? /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: 'flex',
-        gap: 8,
-        marginTop: 12,
-        paddingTop: 12,
-        borderTop: '1px solid var(--border)'
-      }
-    }, /*#__PURE__*/React.createElement("button", {
-      onClick: () => setReviewerRuntime('ollama'),
-      style: ollamaBtnStyle
-    }, "Ollama"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setReviewerRuntime('claude'),
-      style: claudeBtnStyle
-    }, "Claude")) : null), /*#__PURE__*/React.createElement(Card, {
-      title: "API Key Status"
-    }, keyConnected ? /*#__PURE__*/React.createElement("div", {
-      style: {
-        background: 'var(--bg-void)',
-        border: '1px solid var(--border)',
-        padding: 8,
-        borderRadius: 4,
-        display: 'flex',
-        justifyContent: 'space-between',
-        font: 'var(--text-code)'
-      }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        letterSpacing: 4,
-        opacity: 0.75
-      }
-    }, "sk-****-****-XXXX"), /*#__PURE__*/React.createElement("span", {
-      className: "material-symbols-outlined",
-      style: {
-        color: 'var(--border-strong)'
-      }
-    }, "visibility_off")) : /*#__PURE__*/React.createElement("button", {
-      style: {
-        width: '100%',
-        textAlign: 'center',
-        padding: '8px 16px',
-        border: '1px solid var(--amber)',
-        background: 'transparent',
-        color: 'var(--amber)',
-        font: 'var(--text-label)',
-        cursor: 'pointer',
-        borderRadius: 4
-      }
-    }, "Connect Key"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setKeyConnected(v => !v),
-      style: {
-        background: 'none',
-        border: 'none',
-        color: 'var(--sage)',
-        font: 'var(--text-code)',
-        fontSize: 11,
-        cursor: 'pointer',
-        padding: 0,
-        textAlign: 'left',
-        marginTop: 4
-      }
-    }, `[ preview: ${keyConnected ? 'show disconnected' : 'show connected'} ]`)), /*#__PURE__*/React.createElement(RootBeerGauge, null), /*#__PURE__*/React.createElement(RecentActivityCard, null)));
+      description: "Off: Ollama (local, free) — On: Claude (billed to your key)"
+    })), /*#__PURE__*/React.createElement(ApiKeyCard, {
+      keyPresent: keyPresent,
+      onChanged: refreshStatus
+    }), /*#__PURE__*/React.createElement(RootBeerGauge, {
+      limit: rateLimit ? rateLimit.limit : null,
+      remaining: rateLimit ? rateLimit.remaining : null
+    }), /*#__PURE__*/React.createElement(RecentActivityCard, {
+      sessions: sessionsList,
+      onRename: renameSessionApi,
+      onPin: pinSessionApi,
+      onDelete: deleteSessionApi
+    })));
   }
   function renderMemory() {
     return /*#__PURE__*/React.createElement("div", {
@@ -1185,7 +1858,7 @@ function DashboardApp() {
         font: 'var(--text-headline-md)',
         color: 'var(--amber)'
       }
-    }, memoryEntries.length)), /*#__PURE__*/React.createElement("div", {
+    }, memoryData.stats.total_entries)), /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         justifyContent: 'space-between',
@@ -1202,9 +1875,15 @@ function DashboardApp() {
         font: 'var(--text-code)',
         color: 'var(--text-primary)'
       }
-    }, hasEntries ? memoryEntries[0].timestamp : '—'))), /*#__PURE__*/React.createElement(RecentActivityCard, null)));
+    }, memoryData.stats.last_write || '—'))), /*#__PURE__*/React.createElement(RecentActivityCard, {
+      sessions: sessionsList,
+      onRename: renameSessionApi,
+      onPin: pinSessionApi,
+      onDelete: deleteSessionApi
+    })));
   }
   function renderProtocols() {
+    const protocols = protocolsData.protocols;
     return /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'grid',
@@ -1218,8 +1897,8 @@ function DashboardApp() {
         flexDirection: 'column',
         gap: 16
       }
-    }, protocolDefs.map(p => /*#__PURE__*/React.createElement("div", {
-      key: p.id,
+    }, protocols.length ? protocols.map(p => /*#__PURE__*/React.createElement("div", {
+      key: p.filename,
       style: {
         background: 'var(--surface-card)',
         border: '1px solid var(--potato)',
@@ -1228,12 +1907,8 @@ function DashboardApp() {
         display: 'flex',
         flexDirection: 'column',
         gap: 12,
-        cursor: 'pointer'
-      },
-      onClick: () => setExpanded(s => ({
-        ...s,
-        [p.id]: !s[p.id]
-      }))
+        opacity: p.enabled ? 1 : 0.55
+      }
     }, /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
@@ -1247,32 +1922,62 @@ function DashboardApp() {
       style: {
         margin: 0,
         font: 'var(--text-headline-sm)',
-        color: 'var(--text-primary)'
+        color: 'var(--text-primary)',
+        cursor: 'pointer'
+      },
+      onClick: () => setExpanded(s => ({
+        ...s,
+        [p.filename]: !s[p.filename]
+      }))
+    }, p.title), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12
       }
-    }, p.title), /*#__PURE__*/React.createElement("span", {
+    }, /*#__PURE__*/React.createElement(Toggle, {
+      checked: p.enabled,
+      onChange: enabled => handleProtocolToggle(p.filename, enabled)
+    }), /*#__PURE__*/React.createElement("span", {
       className: "material-symbols-outlined",
       style: {
         color: 'var(--potato)',
-        fontSize: 20
-      }
-    }, expanded[p.id] ? 'expand_less' : 'expand_more')), /*#__PURE__*/React.createElement("p", {
+        fontSize: 20,
+        cursor: 'pointer'
+      },
+      onClick: () => setExpanded(s => ({
+        ...s,
+        [p.filename]: !s[p.filename]
+      }))
+    }, expanded[p.filename] ? 'expand_less' : 'expand_more'))), /*#__PURE__*/React.createElement("p", {
       style: {
         font: 'var(--text-body-sm)',
         margin: 0,
         color: 'var(--text-secondary)'
       }
-    }, p.summary), expanded[p.id] ? /*#__PURE__*/React.createElement("div", {
+    }, p.summary), expanded[p.filename] ? /*#__PURE__*/React.createElement("div", {
       style: {
         borderTop: '1px solid var(--border)',
         paddingTop: 12
       }
-    }, /*#__PURE__*/React.createElement("p", {
+    }, /*#__PURE__*/React.createElement("pre", {
       style: {
         font: 'var(--text-code)',
+        fontSize: 12,
         margin: 0,
-        color: 'var(--error)'
+        color: 'var(--text-secondary)',
+        whiteSpace: 'pre-wrap',
+        fontFamily: 'inherit'
       }
-    }, `Content not found — check file path (${p.filename}).`)) : null))), /*#__PURE__*/React.createElement("div", {
+    }, p.body)) : null)) : /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement("p", {
+      style: {
+        font: 'var(--text-body-sm)',
+        margin: 0,
+        color: 'var(--text-secondary)',
+        textAlign: 'center',
+        padding: '24px 0'
+      }
+    }, `No protocol files found in persona/protocols/.`))), /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         flexDirection: 'column',
@@ -1324,7 +2029,7 @@ function DashboardApp() {
         font: 'var(--text-headline-md)',
         color: 'var(--potato)'
       }
-    }, protocolDefs.length)), /*#__PURE__*/React.createElement("ul", {
+    }, `${protocolsData.active_count} / ${protocols.length}`)), /*#__PURE__*/React.createElement("ul", {
       style: {
         listStyle: 'none',
         margin: 0,
@@ -1336,11 +2041,12 @@ function DashboardApp() {
         fontSize: 12,
         color: 'var(--text-secondary)'
       }
-    }, protocolDefs.map(p => /*#__PURE__*/React.createElement("li", {
-      key: p.id,
+    }, protocols.map(p => /*#__PURE__*/React.createElement("li", {
+      key: p.filename,
       style: {
         display: 'flex',
-        gap: 8
+        gap: 8,
+        opacity: p.enabled ? 1 : 0.5
       }
     }, /*#__PURE__*/React.createElement("span", {
       style: {
@@ -1348,53 +2054,81 @@ function DashboardApp() {
       }
     }, ">"), p.filename))))));
   }
-  function renderTerminal() {
+  function renderSettings() {
+    const totalProtocols = protocolsData.protocols.length;
+    const allProtocolsOn = totalProtocols > 0 && protocolsData.active_count === totalProtocols;
+    const noProtocolsOn = protocolsData.active_count === 0;
+    let masterDescription = 'Every protocol is currently on.';
+    if (noProtocolsOn) {
+      masterDescription = 'Every protocol is currently off.';
+    } else if (!allProtocolsOn) {
+      masterDescription = `${protocolsData.active_count} of ${totalProtocols} protocols on -- flip to turn them all on.`;
+    }
     return /*#__PURE__*/React.createElement("div", {
       style: {
-        display: 'flex',
-        flexDirection: 'column',
-        height: 'calc(100vh - 200px)'
+        display: 'grid',
+        gridTemplateColumns: '7fr 5fr',
+        gap: 24,
+        alignItems: 'start'
       }
     }, /*#__PURE__*/React.createElement("div", {
-      ref: scrollRef,
       style: {
-        flex: 1,
-        overflowY: 'auto',
         display: 'flex',
         flexDirection: 'column',
-        gap: 10,
-        padding: '8px 4px 24px'
+        gap: 24
       }
-    }, scrollback.map((line, i) => line.isCommand ? /*#__PURE__*/React.createElement("div", {
-      key: i,
+    }, /*#__PURE__*/React.createElement(ApiKeyCard, {
+      keyPresent: keyPresent,
+      onChanged: refreshStatus
+    }), /*#__PURE__*/React.createElement(Card, {
+      title: "Default Claude Model",
+      icon: "smart_toy",
+      accent: "amber"
+    }, /*#__PURE__*/React.createElement("select", {
+      value: claudeModel,
+      onChange: e => handleModelChange(e.target.value),
+      style: {
+        width: '100%',
+        background: 'var(--bg-void)',
+        border: '1px solid var(--border)',
+        color: 'var(--text-primary)',
+        font: 'var(--text-code)',
+        padding: 8,
+        borderRadius: 4
+      }
+    }, CLAUDE_MODEL_OPTIONS.map(opt => /*#__PURE__*/React.createElement("option", {
+      key: opt.value,
+      value: opt.value
+    }, opt.label))), /*#__PURE__*/React.createElement("p", {
       style: {
         font: 'var(--text-code)',
-        color: 'var(--text-primary)'
-      }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        color: 'var(--amber)'
-      }
-    }, ">"), " ", line.text) : /*#__PURE__*/React.createElement("div", {
-      key: i,
-      style: {
-        font: 'var(--text-code)',
+        fontSize: 11,
         color: 'var(--text-secondary)',
-        paddingLeft: 16
+        margin: '6px 0 0'
       }
-    }, line.text))), /*#__PURE__*/React.createElement("div", {
+    }, "Used whenever Claude is the active provider -- same setting as the Presence Claude Model card.")), /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement(Toggle, {
+      checked: reviewerOn,
+      onChange: handleReviewerToggle,
+      label: "Reviewer Mode",
+      description: "Off: Ollama (local, free) — On: Claude (billed to your key)"
+    }))), /*#__PURE__*/React.createElement("div", {
       style: {
-        padding: '12px 0 0'
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 24
       }
-    }, /*#__PURE__*/React.createElement(TerminalInput, {
-      value: terminalValue,
-      onChange: e => setTerminalValue(e.target.value),
-      onSubmit: handleTerminalSubmit,
-      placeholder: "Enter command sequence...",
-      style: {
-        transform: 'scale(1.08)',
-        transformOrigin: 'left center'
-      }
+    }, /*#__PURE__*/React.createElement(Card, {
+      title: "All Protocols",
+      icon: "security",
+      accent: "amber"
+    }, /*#__PURE__*/React.createElement(Toggle, {
+      checked: allProtocolsOn,
+      onChange: handleProtocolsBulkToggle,
+      label: "Master Switch",
+      description: masterDescription
+    })), /*#__PURE__*/React.createElement(RootBeerGauge, {
+      limit: rateLimit ? rateLimit.limit : null,
+      remaining: rateLimit ? rateLimit.remaining : null
     })));
   }
   function renderHardware() {
@@ -1414,52 +2148,21 @@ function DashboardApp() {
         overflowY: 'auto',
         paddingRight: 4
       }
-    }, devices.map((d, i) => /*#__PURE__*/React.createElement(Card, {
-      key: i,
-      title: d.name,
-      icon: "memory",
-      accent: "amber"
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        gap: 16
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 6
-      }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        font: 'var(--text-label-caps)',
-        color: 'var(--sage)',
-        letterSpacing: '.05em'
-      }
-    }, d.category), /*#__PURE__*/React.createElement("span", {
+    }, /*#__PURE__*/React.createElement(AddDeviceCard, {
+      onChanged: refreshDevices
+    }), devicesList.length ? devicesList.map(d => /*#__PURE__*/React.createElement(DeviceCard, {
+      key: d.id,
+      device: d,
+      onChanged: refreshDevices
+    })) : /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement("p", {
       style: {
         font: 'var(--text-body-sm)',
-        color: 'var(--text-primary)'
+        margin: 0,
+        color: 'var(--text-secondary)',
+        textAlign: 'center',
+        padding: '24px 0'
       }
-    }, d.spec), /*#__PURE__*/React.createElement("span", {
-      style: {
-        font: 'var(--text-body-sm)',
-        color: 'var(--text-secondary)'
-      }
-    }, d.role), d.aside ? /*#__PURE__*/React.createElement("span", {
-      style: {
-        font: 'var(--text-code)',
-        fontSize: 12,
-        color: 'var(--sage)',
-        fontStyle: 'italic'
-      }
-    }, d.aside) : null), /*#__PURE__*/React.createElement(StatusDot, {
-      status: d.dotStatus,
-      label: d.dotLabel,
-      glow: d.active
-    }))))), /*#__PURE__*/React.createElement("div", {
+    }, "No devices yet. Add the first one above."))), /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         flexDirection: 'column',
@@ -1473,44 +2176,63 @@ function DashboardApp() {
       style: {
         display: 'flex',
         flexDirection: 'column',
-        gap: 14,
-        maxHeight: 480,
+        gap: 18,
+        maxHeight: 'calc(100vh - 220px)',
         overflowY: 'auto'
       }
-    }, newsFeed.map((n, i) => /*#__PURE__*/React.createElement("div", {
-      key: i,
+    }, newsData.map((source, si) => /*#__PURE__*/React.createElement("div", {
+      key: si
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        font: 'var(--text-label-caps)',
+        color: 'var(--amber)',
+        letterSpacing: '.05em',
+        marginBottom: 8
+      }
+    }, source.source), source.items.length ? source.items.map((item, ii) => /*#__PURE__*/React.createElement("div", {
+      key: ii,
       style: {
         display: 'flex',
         flexDirection: 'column',
         gap: 4,
         paddingBottom: 12,
+        marginBottom: 12,
         borderBottom: '1px solid var(--border)'
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        gap: 12
       }
     }, /*#__PURE__*/React.createElement("span", {
       style: {
         font: 'var(--text-label)',
-        color: 'var(--amber)'
+        color: 'var(--text-primary)'
       }
-    }, n.title), /*#__PURE__*/React.createElement("span", {
-      style: {
-        font: 'var(--text-code)',
-        fontSize: 11,
-        color: 'var(--text-secondary)',
-        whiteSpace: 'nowrap'
-      }
-    }, n.timestamp)), /*#__PURE__*/React.createElement("p", {
+    }, item.title), /*#__PURE__*/React.createElement("p", {
       style: {
         font: 'var(--text-body-sm)',
         margin: 0,
         color: 'var(--text-secondary)'
       }
-    }, n.summary)))))));
+    }, item.summary), /*#__PURE__*/React.createElement("a", {
+      href: item.link,
+      target: "_blank",
+      rel: "noopener noreferrer",
+      style: {
+        alignSelf: 'flex-start',
+        marginTop: 4,
+        padding: '4px 12px',
+        border: '1px solid var(--amber)',
+        color: 'var(--amber)',
+        font: 'var(--text-code)',
+        fontSize: 11,
+        borderRadius: 4,
+        textDecoration: 'none'
+      }
+    }, "Read →"))) : /*#__PURE__*/React.createElement("p", {
+      style: {
+        font: 'var(--text-code)',
+        fontSize: 11,
+        color: 'var(--error)',
+        margin: '0 0 12px'
+      }
+    }, source.error ? `Couldn't reach this source: ${source.error}` : "No items right now.")))))));
   }
   return /*#__PURE__*/React.createElement("div", {
     style: {
@@ -1521,7 +2243,10 @@ function DashboardApp() {
     }
   }, /*#__PURE__*/React.createElement(Sidebar, {
     activeTab: activeTab,
-    onNavigate: setActiveTab
+    onNavigate: setActiveTab,
+    onReboot: handleReboot,
+    statusLine: sidebarStatusLine,
+    newsData: newsData
   }), /*#__PURE__*/React.createElement("main", {
     style: {
       flex: 1,
@@ -1552,7 +2277,7 @@ function DashboardApp() {
     status: "success",
     label: "LINK ACTIVE",
     glow: true
-  })), isPresence ? renderPresence() : null, isMemory ? renderMemory() : null, isProtocols ? renderProtocols() : null, isTerminal ? renderTerminal() : null, isHardware ? renderHardware() : null));
+  })), isPresence ? renderPresence() : null, isMemory ? renderMemory() : null, isProtocols ? renderProtocols() : null, isSettings ? renderSettings() : null, isHardware ? renderHardware() : null));
 }
 Object.assign(__ds_scope, { DashboardApp });
 __ds_ns.DashboardApp = DashboardApp;
@@ -1751,98 +2476,6 @@ function AboutBento() {
     }
   }, "Generic helpfulness is boring. I wanted an AI that pushes back."))))));
 }
-const cast = [{
-  name: 'Tater (Core)',
-  tone: 'error',
-  tag: 'Unstable',
-  slot: 'tater',
-  desc: 'The primary compute unit. Mostly just complains about the temperature of the CPU and refuses to write unit tests.'
-}, {
-  name: 'Rouge (Agent)',
-  tone: 'sage',
-  tag: 'Observe',
-  slot: 'rouge',
-  desc: 'The web scraper module. Silently judges your browsing history. Occasionally knocks important files off your desktop into the trash.'
-}, {
-  name: 'Mage (Agent)',
-  tone: 'neutral',
-  tag: 'Fetch',
-  slot: 'mage',
-  desc: 'The retrieval agent. Very eager to help, but usually brings back completely unrelated documentation from stack overflow circa 2012.'
-}];
-function NodeInstances() {
-  return /*#__PURE__*/React.createElement("section", {
-    style: {
-      maxWidth: 1120,
-      margin: '0 auto',
-      width: '100%',
-      padding: '0 24px 64px'
-    }
-  }, /*#__PURE__*/React.createElement("h2", {
-    style: {
-      font: 'var(--text-headline-md)',
-      borderBottom: '1px solid var(--border)',
-      paddingBottom: 12,
-      marginBottom: 24,
-      display: 'flex',
-      gap: 8,
-      alignItems: 'center',
-      color: 'var(--text-primary)'
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "material-symbols-outlined",
-    style: {
-      color: 'var(--amber)'
-    }
-  }, "groups"), "Node Instances"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(3,1fr)',
-      gap: 24
-    }
-  }, cast.map(c => /*#__PURE__*/React.createElement("div", {
-    key: c.name,
-    style: {
-      background: 'var(--surface-card)',
-      border: '1px solid var(--border)',
-      padding: 16,
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 12
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      borderBottom: '1px solid var(--border)',
-      paddingBottom: 8
-    }
-  }, /*#__PURE__*/React.createElement("h3", {
-    style: {
-      margin: 0,
-      font: 'var(--text-title-sm)',
-      color: 'var(--text-primary)'
-    }
-  }, c.name), /*#__PURE__*/React.createElement(Badge, {
-    tone: c.tone
-  }, c.tag)), /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: '100%',
-      height: 180,
-      filter: 'grayscale(1)'
-    }
-  }, /*#__PURE__*/React.createElement("image-slot", {
-    id: c.slot,
-    shape: "rect",
-    placeholder: `Drop ${c.name} art`
-  })), /*#__PURE__*/React.createElement("p", {
-    style: {
-      margin: 0,
-      color: 'var(--text-secondary)',
-      font: 'var(--text-body-sm)'
-    }
-  }, c.desc)))));
-}
 function Footer() {
   return /*#__PURE__*/React.createElement("footer", {
     style: {
@@ -1892,7 +2525,7 @@ function LandingApp() {
       minHeight: '100vh',
       background: 'var(--bg)'
     }
-  }, /*#__PURE__*/React.createElement(Nav, null), /*#__PURE__*/React.createElement(Hero, null), /*#__PURE__*/React.createElement(AboutBento, null), /*#__PURE__*/React.createElement(NodeInstances, null), /*#__PURE__*/React.createElement(Footer, null));
+  }, /*#__PURE__*/React.createElement(Nav, null), /*#__PURE__*/React.createElement(Hero, null), /*#__PURE__*/React.createElement(AboutBento, null), /*#__PURE__*/React.createElement(Footer, null));
 }
 window.LandingApp = LandingApp;
 Object.assign(__ds_scope, { LandingApp });
