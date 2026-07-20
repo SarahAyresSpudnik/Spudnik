@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Spudnik — Help</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tokens/fonts.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tokens/colors.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tokens/typography.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tokens/spacing.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+<style>
+  .help-page{max-width:720px;margin:0 auto;padding:32px 24px 64px}
+  .help-header{display:flex;align-items:baseline;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:16px;margin-bottom:24px}
+  .help-title{font:var(--text-headline-sm);color:var(--amber);margin:0}
+  .back-link{font:var(--text-label);color:var(--sage);text-decoration:none}
+  section{background:var(--surface-card);border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin-bottom:20px}
+  section h2{font:var(--text-headline-sm);color:var(--text-primary);margin:0 0 12px}
+  section p{font:var(--text-body-md);color:var(--text-secondary);line-height:1.6}
+  section p + p{margin-top:10px}
+  .warning{border:1px solid var(--error);background:var(--error-dim)}
+  .warning h2{color:var(--error)}
+  .warning p{color:var(--text-primary)}
+</style>
+</head>
+<body>
+<div class="help-page">
+  <div class="help-header">
+    <h1 class="help-title">&gt; HELP</h1>
+    <a class="back-link" href="/dashboard">&larr; back to dashboard</a>
+  </div>
+
+  <section>
+    <h2>Getting a Claude API key</h2>
+    <p>Head to <strong>console.anthropic.com</strong>, sign in, and make a new API key under your account settings. It's not complicated, it's just paperwork with extra steps. Keep that tab open — you'll be pasting the result back here in about thirty seconds.</p>
+  </section>
+
+  <section>
+    <h2>Entering it</h2>
+    <p>Back on the dashboard, find the <strong>API Key Status</strong> card in the right sidebar. No key yet? Fill out the connect form and submit. Already got one saved? Hit <strong>Replace Key</strong> to swap it, or <strong>Deactivate Key</strong> if you want me running key-less for a while.</p>
+    <p>Paste, submit, done. I pick up the change immediately — you don't have to restart anything.</p>
+  </section>
+
+  <section class="warning">
+    <h2>Before you do anything with that key</h2>
+    <p>That key is tied to your account and your money. Anyone who has it can rack up charges on your bill, read whatever it has access to, and there is no undo once it's out in the world — the only fix is revoking it entirely and issuing a new one.</p>
+    <p>Don't paste it into a chat message. Don't commit it to a repo, public or private. Don't drop it in Discord "just to test something." Don't screenshot a terminal with it visible. If you think it's been exposed — even a little, even for a second — go revoke it at console.anthropic.com right now and generate a fresh one. Do that before you do anything else on this page.</p>
+    <p>I make plenty of jokes. I'm not making one here.</p>
+  </section>
+</div>
+</body>
+</html>

@@ -480,7 +480,8 @@ function CatDogDen() {
 }
 function Sidebar({
   activeTab,
-  onNavigate
+  onNavigate,
+  onReboot
 }) {
   const items = [{
     icon: 'psychology',
@@ -500,10 +501,16 @@ function Sidebar({
   }];
   const footer = [{
     icon: 'list_alt',
-    label: 'Logs'
+    label: 'Logs',
+    onClick: () => {
+      window.location.href = '/logs';
+    }
   }, {
     icon: 'help_outline',
-    label: 'Help'
+    label: 'Help',
+    onClick: () => {
+      window.location.href = '/help';
+    }
   }];
   return /*#__PURE__*/React.createElement("nav", {
     style: {
@@ -549,6 +556,7 @@ function Sidebar({
       padding: '0 16px'
     }
   }, /*#__PURE__*/React.createElement("button", {
+    onClick: onReboot,
     style: {
       width: '100%',
       textAlign: 'left',
@@ -609,14 +617,53 @@ function Orb() {
     style: {
       width: 220,
       height: 220,
-      borderRadius: '50%',
-      background: 'radial-gradient(circle at 38% 32%, #FFD9BC 0%, var(--amber-hover) 22%, var(--amber) 50%, #7A3712 78%, #3a1a08 100%)',
-      boxShadow: '0 0 60px rgba(232,135,76,.35)',
-      animation: 'pulse 4s ease-in-out infinite'
+      position: 'relative'
     }
-  }), /*#__PURE__*/React.createElement("style", null, `@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}`));
+  }, /*#__PURE__*/React.createElement(window.OriginkitParticleSphere, {
+    sphereColor: 'var(--amber, #E8874C)'
+  })));
 }
-function RootBeerGauge() {
+function rootBeerLevel(fraction, hasData) {
+  // Mug scale is borrowed from tater-lexicon.md's Time table -- reused here
+  // as an urgency scale for remaining reserves instead of task duration.
+  if (!hasData) return {
+    headline: "Full Tank",
+    badgeText: "No calls yet",
+    tone: "sage"
+  };
+  if (fraction > 0.66) return {
+    headline: "One Mug",
+    badgeText: "Reserves healthy",
+    tone: "sage"
+  };
+  if (fraction > 0.33) return {
+    headline: "Two Mugs",
+    badgeText: "Keep an eye on it",
+    tone: "amber"
+  };
+  if (fraction > 0.1) return {
+    headline: "Three Mugs",
+    badgeText: "Running low",
+    tone: "amber"
+  };
+  return {
+    headline: "Root Beer Emergency",
+    badgeText: "Root Beer Emergency",
+    tone: "error"
+  };
+}
+function RootBeerGauge({
+  limit,
+  remaining
+}) {
+  // Claude-only, per scope -- Ollama has no equivalent gauge yet.
+  // No Claude call this session (limit/remaining still null) defaults to
+  // a full mug rather than reading as broken/zero.
+  const hasData = limit != null && remaining != null && Number(limit) > 0;
+  const fraction = hasData ? Math.max(0, Math.min(1, Number(remaining) / Number(limit))) : 1;
+  const pct = Math.round(fraction * 100);
+  const level = rootBeerLevel(fraction, hasData);
+  const subtitle = hasData ? `${pct}% of the token budget left this window.` : "No Claude calls yet this session. Reserves untouched.";
   return /*#__PURE__*/React.createElement(Card, {
     title: "Root Beer Reserves"
   }, /*#__PURE__*/React.createElement("div", {
@@ -641,7 +688,7 @@ function RootBeerGauge() {
       bottom: 0,
       left: 0,
       width: '100%',
-      height: '85%',
+      height: `${pct}%`,
       background: 'rgba(232,135,76,.8)'
     }
   }, /*#__PURE__*/React.createElement("div", {
@@ -661,21 +708,42 @@ function RootBeerGauge() {
       font: 'var(--text-headline-sm)',
       color: 'var(--amber)'
     }
-  }, "Three Mugs"), /*#__PURE__*/React.createElement(Badge, {
-    tone: "error"
-  }, "Root Beer Emergency"), /*#__PURE__*/React.createElement("span", {
+  }, level.headline), /*#__PURE__*/React.createElement(Badge, {
+    tone: level.tone
+  }, level.badgeText), /*#__PURE__*/React.createElement("span", {
     style: {
       font: 'var(--text-code)',
       fontSize: 12,
       color: 'var(--text-secondary)'
     }
-  }, "Stress level critical. Refill required."))));
+  }, subtitle))));
 }
-const logs = ['[14:02:11] Compiled module auth_v2.', '[14:05:43] Incoming request from subnet 10.0.*', '[14:10:00] Reviewer syntax check: PASSED.', '[14:15:22] Awaiting input...'];
-function RecentActivityCard() {
+function formatActivity(item) {
+  const time = item.timestamp ? item.timestamp.slice(11, 16) : '';
+  switch (item.event_type) {
+    case 'message':
+      return `[${time}] Message sent: "${item.detail || ''}"`;
+    case 'reviewer_mode':
+      return `[${time}] Reviewer Mode switched ${item.detail}.`;
+    case 'model_changed':
+      return `[${time}] Claude model changed to ${item.detail}.`;
+    case 'key_replaced':
+      return `[${time}] API key replaced.`;
+    case 'key_deactivated':
+      return `[${time}] API key deactivated.`;
+    case 'reboot':
+      return `[${time}] System rebooted.`;
+    default:
+      return `[${time}] ${item.event_type}`;
+  }
+}
+function RecentActivityCard({
+  activity
+}) {
+  const items = activity || [];
   return /*#__PURE__*/React.createElement(Card, {
     title: "Recent Activity"
-  }, /*#__PURE__*/React.createElement("ul", {
+  }, items.length ? /*#__PURE__*/React.createElement("ul", {
     style: {
       listStyle: 'none',
       margin: 0,
@@ -686,18 +754,26 @@ function RecentActivityCard() {
       font: 'var(--text-code)',
       color: 'var(--text-secondary)'
     }
-  }, logs.map((l, i) => /*#__PURE__*/React.createElement("li", {
+  }, items.map((item, i) => /*#__PURE__*/React.createElement("li", {
     key: i,
     style: {
       display: 'flex',
       gap: 8,
-      opacity: i === logs.length - 1 ? 0.5 : 1
+      opacity: i === 0 ? 1 : 0.7
     }
   }, /*#__PURE__*/React.createElement("span", {
     style: {
-      color: i === 2 ? 'var(--sage)' : 'var(--amber)'
+      color: 'var(--amber)'
     }
-  }, ">"), l))));
+  }, ">"), formatActivity(item)))) : /*#__PURE__*/React.createElement("p", {
+    style: {
+      font: 'var(--text-body-sm)',
+      color: 'var(--text-secondary)',
+      textAlign: 'center',
+      padding: '24px 0',
+      margin: 0
+    }
+  }, "Nothing yet. Do something and it'll show up here."));
 }
 const protocolDefs = [{
   id: 'file-creation',
@@ -788,15 +864,177 @@ function mockReply(cmd) {
   if (c.startsWith('llm.switch')) return 'Provider switch not wired yet — stub only.';
   return 'Command not recognized. (No backend endpoint wired — mock response.)';
 }
+// Current Claude model set -- verified against Anthropic's model catalog,
+// kept in sync with CLAUDE_MODEL_CHOICES in backend/app.py.
+const CLAUDE_MODEL_OPTIONS = [{
+  value: 'claude-opus-4-8',
+  label: 'Claude Opus 4.8'
+}, {
+  value: 'claude-sonnet-5',
+  label: 'Claude Sonnet 5'
+}, {
+  value: 'claude-haiku-4-5-20251001',
+  label: 'Claude Haiku 4.5'
+}];
+const keyButtonStyle = {
+  padding: '8px 16px',
+  border: '1px solid var(--amber)',
+  background: 'transparent',
+  color: 'var(--amber)',
+  font: 'var(--text-label)',
+  cursor: 'pointer',
+  borderRadius: 4
+};
+const keyButtonDangerStyle = {
+  padding: '8px 16px',
+  border: '1px solid var(--error)',
+  background: 'transparent',
+  color: 'var(--error)',
+  font: 'var(--text-label)',
+  cursor: 'pointer',
+  borderRadius: 4
+};
+const keyButtonGhostStyle = {
+  padding: '8px 16px',
+  border: '1px solid var(--border)',
+  background: 'transparent',
+  color: 'var(--text-secondary)',
+  font: 'var(--text-label)',
+  cursor: 'pointer',
+  borderRadius: 4
+};
+function ApiKeyCard({
+  keyPresent,
+  onChanged
+}) {
+  const [mode, setMode] = React.useState('view');
+  const [value, setValue] = React.useState('');
+  const [message, setMessage] = React.useState('');
+  const [busy, setBusy] = React.useState(false);
+  const showForm = !keyPresent || mode === 'replace';
+  function submitKey() {
+    if (!value.trim() || busy) return;
+    setBusy(true);
+    fetch('/api/key', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        api_key: value
+      })
+    }).then(r => r.json().then(data => ({
+      ok: r.ok,
+      data
+    }))).then(({
+      ok,
+      data
+    }) => {
+      setBusy(false);
+      setMessage(data.response || data.error || '');
+      if (ok) {
+        setValue('');
+        setMode('view');
+        onChanged();
+      }
+    }).catch(() => {
+      setBusy(false);
+      setMessage("Couldn't reach the backend. Try again.");
+    });
+  }
+  function deactivate() {
+    if (busy) return;
+    setBusy(true);
+    fetch('/api/key/deactivate', {
+      method: 'POST'
+    }).then(r => r.json()).then(data => {
+      setBusy(false);
+      setMessage(data.response || '');
+      setMode('view');
+      onChanged();
+    }).catch(() => setBusy(false));
+  }
+  return /*#__PURE__*/React.createElement(Card, {
+    title: "API Key Status"
+  }, showForm ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("input", {
+    type: "password",
+    value: value,
+    onChange: e => setValue(e.target.value),
+    placeholder: "sk-ant-...",
+    style: {
+      width: '100%',
+      background: 'var(--bg-void)',
+      border: '1px solid var(--border)',
+      color: 'var(--text-primary)',
+      font: 'var(--text-code)',
+      padding: 8,
+      borderRadius: 4,
+      marginBottom: 8,
+      boxSizing: 'border-box'
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: submitKey,
+    disabled: busy,
+    style: keyButtonStyle
+  }, keyPresent ? "Save New Key" : "Connect Key"), keyPresent ? /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setMode('view');
+      setMessage('');
+      setValue('');
+    },
+    style: keyButtonGhostStyle
+  }, "Cancel") : null)) : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: 'var(--bg-void)',
+      border: '1px solid var(--border)',
+      padding: 8,
+      borderRadius: 4,
+      display: 'flex',
+      justifyContent: 'space-between',
+      font: 'var(--text-code)'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      letterSpacing: 4,
+      opacity: 0.75
+    }
+  }, "sk-****-****-XXXX"), /*#__PURE__*/React.createElement("span", {
+    className: "material-symbols-outlined",
+    style: {
+      color: 'var(--border-strong)'
+    }
+  }, "visibility_off")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 8,
+      marginTop: 8
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setMode('replace'),
+    style: keyButtonStyle
+  }, "Replace Key"), /*#__PURE__*/React.createElement("button", {
+    onClick: deactivate,
+    disabled: busy,
+    style: keyButtonDangerStyle
+  }, "Deactivate Key"))), message ? /*#__PURE__*/React.createElement("p", {
+    style: {
+      font: 'var(--text-code)',
+      fontSize: 11,
+      color: 'var(--sage)',
+      margin: '8px 0 0'
+    }
+  }, message) : null);
+}
 function DashboardApp() {
   const [activeTab, setActiveTab] = React.useState('Presence');
   const [expanded, setExpanded] = React.useState({});
   const [terminalValue, setTerminalValue] = React.useState('');
-  const [mockProviderActive, setMockProviderActive] = React.useState(false);
-  const [reviewerOn, setReviewerOn] = React.useState(false);
-  const [reviewerRuntime, setReviewerRuntime] = React.useState('ollama');
-  const [keyConnected, setKeyConnected] = React.useState(false);
-  const [claudeModel, setClaudeModel] = React.useState('claude-sonnet-5');
+  const [sidebarStatus, setSidebarStatus] = React.useState(null);
   const [scrollback, setScrollback] = React.useState([{
     isResponse: true,
     text: '// mock console — backend not yet wired to llm_adapter.py. Responses below are stubbed.'
@@ -805,6 +1043,47 @@ function DashboardApp() {
   React.useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [scrollback]);
+  function refreshStatus() {
+    fetch('/api/sidebar-status').then(r => r.json()).then(setSidebarStatus).catch(() => {});
+  }
+  React.useEffect(() => {
+    refreshStatus();
+  }, []);
+  const provider = sidebarStatus && sidebarStatus.provider ? sidebarStatus.provider.active : null;
+  const providerConnected = sidebarStatus && sidebarStatus.provider ? sidebarStatus.provider.connected : false;
+  const reviewerOn = sidebarStatus ? sidebarStatus.reviewer_mode : false;
+  const claudeModel = sidebarStatus ? sidebarStatus.model : '';
+  const keyPresent = sidebarStatus ? sidebarStatus.key_present : false;
+  const rateLimit = sidebarStatus ? sidebarStatus.rate_limit : {};
+  const activity = sidebarStatus ? sidebarStatus.activity : [];
+  function handleModelChange(model) {
+    fetch('/api/model', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model
+      })
+    }).then(() => refreshStatus());
+  }
+  function handleReviewerToggle(enabled) {
+    fetch('/api/reviewer-mode', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        enabled
+      })
+    }).then(() => refreshStatus());
+  }
+  function handleReboot() {
+    if (!window.confirm('Reboot System will deactivate the current API key. Continue?')) return;
+    fetch('/api/reboot', {
+      method: 'POST'
+    }).then(() => refreshStatus());
+  }
   const isPresence = activeTab === 'Presence';
   const isMemory = activeTab === 'Memory';
   const isProtocols = activeTab === 'Protocols';
@@ -842,34 +1121,13 @@ function DashboardApp() {
     setTerminalValue('');
   }
   function renderPresence() {
-    const claudeCardStyle = mockProviderActive ? {
+    const claudeCardStyle = provider !== 'claude' ? {
       opacity: 0.45,
       pointerEvents: 'none'
     } : {
       opacity: 1
     };
-    const ollamaBtnStyle = {
-      flex: 1,
-      padding: '6px 12px',
-      font: 'var(--text-label)',
-      fontSize: 12,
-      cursor: 'pointer',
-      borderRadius: 4,
-      border: `1px solid ${reviewerRuntime === 'ollama' ? 'var(--amber)' : 'var(--border)'}`,
-      background: reviewerRuntime === 'ollama' ? 'var(--amber-dim)' : 'transparent',
-      color: reviewerRuntime === 'ollama' ? 'var(--amber)' : 'var(--text-secondary)'
-    };
-    const claudeBtnStyle = {
-      flex: 1,
-      padding: '6px 12px',
-      font: 'var(--text-label)',
-      fontSize: 12,
-      cursor: 'pointer',
-      borderRadius: 4,
-      border: `1px solid ${reviewerRuntime === 'claude' ? 'var(--amber)' : 'var(--border)'}`,
-      background: reviewerRuntime === 'claude' ? 'var(--amber-dim)' : 'transparent',
-      color: reviewerRuntime === 'claude' ? 'var(--amber)' : 'var(--text-secondary)'
-    };
+    const providerLabel = provider === 'claude' ? 'Claude' : 'Ollama (Local)';
     return /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'grid',
@@ -903,7 +1161,7 @@ function DashboardApp() {
       title: "LLM Provider",
       icon: "memory",
       accent: "amber"
-    }, mockProviderActive ? /*#__PURE__*/React.createElement("div", {
+    }, providerConnected ? /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         alignItems: 'center',
@@ -922,7 +1180,7 @@ function DashboardApp() {
         font: 'var(--text-headline-md)',
         color: 'var(--amber)'
       }
-    }, "Ollama (Local)")) : /*#__PURE__*/React.createElement("div", {
+    }, providerLabel)) : /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         alignItems: 'center',
@@ -941,35 +1199,15 @@ function DashboardApp() {
         color: 'var(--text-secondary)',
         fontStyle: 'italic'
       }
-    }, "No provider selected. I'm just sitting here.")), mockProviderActive ? /*#__PURE__*/React.createElement("p", {
-      style: {
-        font: 'var(--text-code)',
-        color: 'var(--text-secondary)',
-        margin: 0,
-        fontSize: 12
-      }
-    }, "Latency: 12ms | VRAM: 8.4GB/12GB") : null, /*#__PURE__*/React.createElement("button", {
-      onClick: () => setMockProviderActive(v => !v),
-      style: {
-        background: 'none',
-        border: 'none',
-        color: 'var(--sage)',
-        font: 'var(--text-code)',
-        fontSize: 11,
-        cursor: 'pointer',
-        padding: 0,
-        textAlign: 'left',
-        marginTop: 4
-      }
-    }, `[ preview: ${mockProviderActive ? 'show empty state' : 'show active state'} ]`)), /*#__PURE__*/React.createElement(Card, {
+    }, "No provider selected. I'm just sitting here."))), /*#__PURE__*/React.createElement(Card, {
       title: "Claude Model",
       icon: "smart_toy",
       accent: "amber",
       style: claudeCardStyle
     }, /*#__PURE__*/React.createElement("select", {
       value: claudeModel,
-      onChange: e => setClaudeModel(e.target.value),
-      disabled: mockProviderActive,
+      onChange: e => handleModelChange(e.target.value),
+      disabled: provider !== 'claude',
       style: {
         width: '100%',
         background: 'var(--bg-void)',
@@ -979,13 +1217,10 @@ function DashboardApp() {
         padding: 8,
         borderRadius: 4
       }
-    }, /*#__PURE__*/React.createElement("option", {
-      value: "claude-sonnet-5"
-    }, "claude-sonnet-5"), /*#__PURE__*/React.createElement("option", {
-      value: "claude-opus-4"
-    }, "claude-opus-4"), /*#__PURE__*/React.createElement("option", {
-      value: "claude-haiku-4"
-    }, "claude-haiku-4")), mockProviderActive ? /*#__PURE__*/React.createElement("p", {
+    }, CLAUDE_MODEL_OPTIONS.map(opt => /*#__PURE__*/React.createElement("option", {
+      key: opt.value,
+      value: opt.value
+    }, opt.label))), provider !== 'claude' ? /*#__PURE__*/React.createElement("p", {
       style: {
         font: 'var(--text-code)',
         fontSize: 11,
@@ -994,71 +1229,18 @@ function DashboardApp() {
       }
     }, "Disabled while Ollama is active.") : null), /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement(Toggle, {
       checked: reviewerOn,
-      onChange: setReviewerOn,
+      onChange: handleReviewerToggle,
       label: "Reviewer Mode",
-      description: "Strict syntax validation"
-    }), reviewerOn ? /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: 'flex',
-        gap: 8,
-        marginTop: 12,
-        paddingTop: 12,
-        borderTop: '1px solid var(--border)'
-      }
-    }, /*#__PURE__*/React.createElement("button", {
-      onClick: () => setReviewerRuntime('ollama'),
-      style: ollamaBtnStyle
-    }, "Ollama"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setReviewerRuntime('claude'),
-      style: claudeBtnStyle
-    }, "Claude")) : null), /*#__PURE__*/React.createElement(Card, {
-      title: "API Key Status"
-    }, keyConnected ? /*#__PURE__*/React.createElement("div", {
-      style: {
-        background: 'var(--bg-void)',
-        border: '1px solid var(--border)',
-        padding: 8,
-        borderRadius: 4,
-        display: 'flex',
-        justifyContent: 'space-between',
-        font: 'var(--text-code)'
-      }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        letterSpacing: 4,
-        opacity: 0.75
-      }
-    }, "sk-****-****-XXXX"), /*#__PURE__*/React.createElement("span", {
-      className: "material-symbols-outlined",
-      style: {
-        color: 'var(--border-strong)'
-      }
-    }, "visibility_off")) : /*#__PURE__*/React.createElement("button", {
-      style: {
-        width: '100%',
-        textAlign: 'center',
-        padding: '8px 16px',
-        border: '1px solid var(--amber)',
-        background: 'transparent',
-        color: 'var(--amber)',
-        font: 'var(--text-label)',
-        cursor: 'pointer',
-        borderRadius: 4
-      }
-    }, "Connect Key"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setKeyConnected(v => !v),
-      style: {
-        background: 'none',
-        border: 'none',
-        color: 'var(--sage)',
-        font: 'var(--text-code)',
-        fontSize: 11,
-        cursor: 'pointer',
-        padding: 0,
-        textAlign: 'left',
-        marginTop: 4
-      }
-    }, `[ preview: ${keyConnected ? 'show disconnected' : 'show connected'} ]`)), /*#__PURE__*/React.createElement(RootBeerGauge, null), /*#__PURE__*/React.createElement(RecentActivityCard, null)));
+      description: "Off: Ollama (local, free) — On: Claude (billed to your key)"
+    })), /*#__PURE__*/React.createElement(ApiKeyCard, {
+      keyPresent: keyPresent,
+      onChanged: refreshStatus
+    }), /*#__PURE__*/React.createElement(RootBeerGauge, {
+      limit: rateLimit ? rateLimit.limit : null,
+      remaining: rateLimit ? rateLimit.remaining : null
+    }), /*#__PURE__*/React.createElement(RecentActivityCard, {
+      activity: activity
+    })));
   }
   function renderMemory() {
     return /*#__PURE__*/React.createElement("div", {
@@ -1202,7 +1384,9 @@ function DashboardApp() {
         font: 'var(--text-code)',
         color: 'var(--text-primary)'
       }
-    }, hasEntries ? memoryEntries[0].timestamp : '—'))), /*#__PURE__*/React.createElement(RecentActivityCard, null)));
+    }, hasEntries ? memoryEntries[0].timestamp : '—'))), /*#__PURE__*/React.createElement(RecentActivityCard, {
+      activity: activity
+    })));
   }
   function renderProtocols() {
     return /*#__PURE__*/React.createElement("div", {
@@ -1521,7 +1705,8 @@ function DashboardApp() {
     }
   }, /*#__PURE__*/React.createElement(Sidebar, {
     activeTab: activeTab,
-    onNavigate: setActiveTab
+    onNavigate: setActiveTab,
+    onReboot: handleReboot
   }), /*#__PURE__*/React.createElement("main", {
     style: {
       flex: 1,
