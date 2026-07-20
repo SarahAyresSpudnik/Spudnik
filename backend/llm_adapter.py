@@ -9,6 +9,8 @@ from datetime import datetime, timezone
 
 from db import get_connection, get_recent_messages
 
+from rate_limit_state import set_rate_limit
+
 
 # Define main funct every route will call
 def get_response(message, session_id, mode="default"):
@@ -43,13 +45,21 @@ def get_response(message, session_id, mode="default"):
         # current message is what's happening now
         history = get_recent_messages(session_id)
         history.append({"role": "user", "content": message})
-        print(f"DEBUG: using model = {os.getenv('CLAUDE_MODEL', 'claude-haiku-4-5-20251001')}") 
-        response = client.messages.create(
+        print(f"DEBUG: using model = {os.getenv('CLAUDE_MODEL', 'claude-haiku-4-5-20251001')}")
+        raw_response = client.messages.with_raw_response.create(
             model=os.getenv("CLAUDE_MODEL", "claude-haiku-4-5-20251001"),
             max_tokens=5050,
             system=system_prompt,
             messages=history,
         )
+        # Root Beer Reserves reads from these -- captured every Claude call,
+        # overwriting whatever was there before.
+        set_rate_limit(
+            raw_response.headers.get("anthropic-ratelimit-tokens-limit"),
+            raw_response.headers.get("anthropic-ratelimit-tokens-remaining"),
+            raw_response.headers.get("anthropic-ratelimit-tokens-reset"),
+        )
+        response = raw_response.parse()
         reply = ""
         for block in response.content:
             if block.type == "text":

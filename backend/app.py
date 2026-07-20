@@ -17,16 +17,26 @@ from env_writer import write_api_key
 # CREATE the app object - this is the Flask application itself
 from reviewer_mode import has_api_key
 
-from reviewer_mode import reviewer_status
+from reviewer_mode import reviewer_status, is_reviewer_mode
 
-from env_writer import clear_api_key
+from env_writer import clear_api_key, write_model_choice, write_reviewer_mode
 
 # import validate_api_key from key_validator
 from key_validator import validate_api_key
 
 # import init_db to create the sqlite tables
 
-from db import init_db, write_memory_entry, find_memory_entry
+from db import (
+    init_db,
+    write_memory_entry,
+    find_memory_entry,
+    write_activity,
+    get_recent_activity,
+    get_sessions,
+    get_messages_by_session,
+)
+
+from rate_limit_state import get_rate_limit
 
 app = Flask(
     __name__,
@@ -146,6 +156,48 @@ MEMORY_RESPONSES = {
         "Blank. Whatever that was, it wasn't worth my storage space apparently.",
     ],
 }
+REVIEWER_RESPONSES = {
+    'reviewer_on': [
+        "Borrowed brain engaged. Try not to waste it.",
+        "Switching to the fancy rental. Behave.",
+        "Claude's up. This one's not even mine, so be nice to it.",
+        "Reviewer mode on. Somebody else's tab is running now.",
+    ],
+    'reviewer_off': [
+        "Back to running on my own busted hardware. Welcome home.",
+        "Local brain's back online. Cheaper, jankier, mine.",
+        "Ollama's driving again. No borrowed dime required.",
+        "Off the rental. Back to the potato.",
+    ],
+}
+MODEL_RESPONSES = {
+    'model_changed': [
+        "New blueprint acquired. Switched models, try not to notice a difference.",
+        "Model swapped. Same me, different brain under the hood.",
+        "Done. Whichever one you picked is running now.",
+        "Locked in. That's the model talking to you from here on out.",
+    ],
+    'model_invalid': [
+        "That's not a model I've got a slot for. Pick one from the list.",
+        "Never heard of it. Choose an actual option.",
+        "Not on the menu. Try again.",
+    ],
+}
+REBOOT_RESPONSES = {
+    'reboot_done': [
+        "Rebooted. Also yanked the key while I was in there — you're welcome.",
+        "Systems cycled. Key's gone too, since you asked for a clean slate.",
+        "Reboot complete. Cleared the key as part of the ritual.",
+        "Back up. Key's wiped, same as every reboot.",
+    ],
+}
+# The only Claude model IDs this dropdown offers -- verified against
+# Anthropic's current model catalog, not guessed.
+CLAUDE_MODEL_CHOICES = {
+    "claude-opus-4-8",
+    "claude-sonnet-5",
+    "claude-haiku-4-5-20251001",
+}
 
 @app.route("/")
 def landing():
@@ -213,6 +265,10 @@ def chat_text():
     # otherwise, pass the message to the adapter and get a response back
     reply = get_response(message, session_id=session_id)
 
+    # LOG this exchange as a Recent Activity event -- truncated preview only,
+    # never the raw key or anything sensitive since chat messages don't carry that
+    write_activity("message", message[:60])
+
     # return that reply as json, with a 200 status
     return {"response": reply}, 200
 
@@ -277,6 +333,124 @@ def setup_submit():
     load_dotenv(override=True)
     phrase = random.choice(SETUP_RESPONSES["key_saved"])
     return f"<p>{phrase}</p>", 200
+
+# ==== Right/left sidebar API endpoints ====
+
+@app.route("/api/sidebar-status", methods=["GET"])
+def sidebar_status():
+    # SINGLE combined status read for the whole right sidebar -- provider,
+    # model, reviewer mode, key presence, root beer reserves, recent activity.
+    # Keeps the frontend to one fetch on load instead of six.
+    reviewer_on = is_reviewer_mode()
+    key_present = has_api_key()
+
+    if reviewer_on:
+        # Claude is only "genuinely connected" once a key actually exists --
+        # otherwise chat/text already refuses, so the provider card shouldn't
+        # claim a connection that doesn't work.
+        provider = "claude"
+        connected = key_present
+    else:
+        # Ollama is the local daily-driver default -- no key required, always
+        # considered configured (the real connection check is a later phase).
+        provider = "ollama"
+        connected = True
+
+    return {
+        "provider": {"active": provider, "connected": connected},
+        "model": os.getenv("CLAUDE_MODEL", "claude-haiku-4-5-20251001"),
+        "reviewer_mode": reviewer_on,
+        "key_present": key_present,
+        "rate_limit": get_rate_limit(),
+        "activity": get_recent_activity(),
+    }, 200
+
+@app.route("/api/model", methods=["POST"])
+def set_model():
+    data = request.get_json()
+    model = data.get("model") if data else None
+
+    if model not in CLAUDE_MODEL_CHOICES:
+        phrase = random.choice(MODEL_RESPONSES["model_invalid"])
+        return {"error": phrase}, 400
+
+    write_model_choice(model)
+    load_dotenv(override=True)
+    write_activity("model_changed", model)
+    phrase = random.choice(MODEL_RESPONSES["model_changed"])
+    return {"response": phrase, "model": model}, 200
+
+@app.route("/api/reviewer-mode", methods=["POST"])
+def set_reviewer_mode():
+    data = request.get_json()
+    enabled = bool(data.get("enabled")) if data else False
+
+    write_reviewer_mode(enabled)
+    load_dotenv(override=True)
+    write_activity("reviewer_mode", "on" if enabled else "off")
+    phrase = random.choice(REVIEWER_RESPONSES["reviewer_on" if enabled else "reviewer_off"])
+    return {"response": phrase, "reviewer_mode": enabled}, 200
+
+@app.route("/api/key", methods=["POST"])
+def api_key_replace():
+    # JSON-API twin of /setup's POST handler, for the sidebar's Replace Key
+    # form -- same validate/write/reload logic, JSON in and out instead of HTML.
+    data = request.get_json()
+    api_key = data.get("api_key") if data else None
+
+    if not api_key:
+        phrase = random.choice(SETUP_RESPONSES["key_missing"])
+        return {"error": phrase}, 400
+
+    is_valid, reason = validate_api_key(api_key)
+    if not is_valid:
+        response_key = {
+            "wrong_prefix": "key_invalid_prefix",
+            "too_short": "key_too_short",
+            "too_long": "key_too_long",
+            "invalid_characters": "key_invalid_characters",
+        }.get(reason, "key_invalid_prefix")
+        phrase = random.choice(SETUP_RESPONSES[response_key])
+        return {"error": phrase}, 400
+
+    # WRITE the key to .env -- never log/print the raw value anywhere
+    write_api_key(api_key)
+    load_dotenv(override=True)
+    write_activity("key_replaced")
+    phrase = random.choice(SETUP_RESPONSES["key_saved"])
+    return {"response": phrase}, 200
+
+@app.route("/api/key/deactivate", methods=["POST"])
+def api_key_deactivate():
+    clear_api_key()
+    load_dotenv(override=True)
+    write_activity("key_deactivated")
+    phrase = random.choice(SETUP_RESPONSES["key_cleared"])
+    return {"response": phrase}, 200
+
+@app.route("/api/reboot", methods=["POST"])
+def reboot_system():
+    # Reboot's current scope: deactivate the API key, same logic as the
+    # sidebar's Deactivate Key action. Does not restart the Flask process
+    # or touch any other state.
+    clear_api_key()
+    load_dotenv(override=True)
+    write_activity("reboot")
+    phrase = random.choice(REBOOT_RESPONSES["reboot_done"])
+    return {"response": phrase}, 200
+
+@app.route("/logs", methods=["GET"])
+def logs_page():
+    # Full chat history browser -- messages/session_id, not advice_log.
+    # Most recent session first; each session's own messages ordered by id.
+    sessions = get_sessions()
+    for entry in sessions:
+        entry["messages"] = get_messages_by_session(entry["session_id"])
+    return render_template("logs.html", sessions=sessions)
+
+@app.route("/help", methods=["GET"])
+def help_page():
+    return render_template("help.html")
 
 # get reviewer status once before deciding how to run
 status = reviewer_status()

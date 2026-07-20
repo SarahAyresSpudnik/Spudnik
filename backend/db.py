@@ -72,6 +72,15 @@ def init_db():
         )
     """)
 
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS activity_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_type TEXT NOT NULL,
+            detail TEXT,
+            timestamp TEXT NOT NULL
+        )
+    """)
+
     conn.commit()
     conn.close()
     
@@ -140,3 +149,95 @@ def find_memory_entry(keyword):
     conn.close()
 
     return row["summary"] if row else None
+
+
+def write_activity(event_type, detail=None):
+    # Logs one meaningful sidebar-visible event -- provider switches, key
+    # changes, reboots, messages sent. Kept separate from advice_log, which
+    # tracks project decisions, not runtime events.
+    conn = get_connection()
+    cursor = conn.cursor()
+    now = datetime.now(timezone.utc).isoformat()
+
+    cursor.execute(
+        "INSERT INTO activity_log (event_type, detail, timestamp) VALUES (?, ?, ?)",
+        (event_type, detail, now)
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_recent_activity(limit=10):
+    # Most recent activity first, for the Recent Activity sidebar card.
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+        SELECT event_type, detail, timestamp
+        FROM activity_log
+        ORDER BY id DESC
+        LIMIT ?
+        """,
+        (limit,)
+    )
+    rows = cursor.fetchall()
+    conn.close()
+
+    return [
+        {"event_type": row["event_type"], "detail": row["detail"], "timestamp": row["timestamp"]}
+        for row in rows
+    ]
+
+
+def get_sessions():
+    # One row per session_id, ordered most-recent-session-first. "Most
+    # recent" is judged by the highest message id in that session, not by
+    # timestamp -- paired user/assistant rows share identical timestamps by
+    # design, so id is the only reliable ordering signal.
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+        SELECT session_id, MAX(id) AS last_id, COUNT(*) AS message_count, MIN(timestamp) AS started_at
+        FROM messages
+        GROUP BY session_id
+        ORDER BY last_id DESC
+        """
+    )
+    rows = cursor.fetchall()
+    conn.close()
+
+    return [
+        {
+            "session_id": row["session_id"],
+            "message_count": row["message_count"],
+            "started_at": row["started_at"],
+        }
+        for row in rows
+    ]
+
+
+def get_messages_by_session(session_id):
+    # ORDER BY id, not timestamp -- paired user/assistant messages share
+    # identical timestamps by design, so id is the only stable chronological key.
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+        SELECT role, content, timestamp
+        FROM messages
+        WHERE session_id = ?
+        ORDER BY id
+        """,
+        (session_id,)
+    )
+    rows = cursor.fetchall()
+    conn.close()
+
+    return [
+        {"role": row["role"], "content": row["content"], "timestamp": row["timestamp"]}
+        for row in rows
+    ]
