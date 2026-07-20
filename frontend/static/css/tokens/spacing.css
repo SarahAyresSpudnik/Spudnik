@@ -1,0 +1,14 @@
+:root{
+--space-xs:4px;
+--space-sm:12px;
+--space-base:8px;
+--space-md:24px;
+--space-lg:48px;
+--space-xl:80px;
+--gutter:24px;
+--container-max:1120px;
+--radius-sm:4px;
+--radius:8px;
+--radius-lg:16px;
+--radius-full:9999px;
+}

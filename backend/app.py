@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, session
+from flask import Flask, request, session, render_template
 # IMPORT random so we can pick a phrase at random
 import random
 
@@ -28,7 +28,11 @@ from key_validator import validate_api_key
 
 from db import init_db, write_memory_entry, find_memory_entry
 
-app= Flask(__name__)
+app = Flask(
+    __name__,
+    template_folder="../frontend/templates",
+    static_folder="../frontend/static"
+)
 
 # secret_key signs the session cookie -- required for flask.session to work at all.
 # Falls back to a dev placeholder if .env doesn't have one yet.
@@ -142,7 +146,15 @@ MEMORY_RESPONSES = {
         "Blank. Whatever that was, it wasn't worth my storage space apparently.",
     ],
 }
-    # other 7 states from the .md file go here eventually - not now
+
+@app.route("/")
+def landing():
+    return render_template("landing.html")
+
+@app.route("/dashboard")
+def dashboard():
+    return render_template("dashboard.html")
+
 # DEFINE the /health route
 @app.route("/health")
 def health():

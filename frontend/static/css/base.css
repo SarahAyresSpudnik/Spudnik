@@ -1,0 +1,9 @@
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--text-primary);font:var(--text-body-md);margin:0;-webkit-font-smoothing:antialiased}
+a{color:var(--sage)}
+a:hover{color:var(--amber-hover)}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--surface-highest)}
+::-webkit-scrollbar-thumb:hover{background:var(--border-strong)}
+.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24}
