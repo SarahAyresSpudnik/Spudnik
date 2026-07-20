@@ -15,9 +15,13 @@
   .logs-title{font:var(--text-headline-sm);color:var(--amber);margin:0}
   .back-link{font:var(--text-label);color:var(--sage);text-decoration:none}
   .session{background:var(--surface-card);border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin-bottom:20px}
+  .session.pinned{border-color:var(--amber);background:var(--amber-dim)}
+  .session.pinned + .session:not(.pinned){margin-top:24px;position:relative}
+  .session.pinned + .session:not(.pinned)::before{content:"";position:absolute;top:-12px;left:0;right:0;border-top:1px solid var(--border)}
   .session-header{display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:12px;font:var(--text-code);color:var(--text-secondary)}
   .session-title{display:flex;align-items:center;gap:10px;min-width:0}
   .session-name{color:var(--amber);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pin-icon{font-size:16px;color:var(--amber);flex-shrink:0;font-variation-settings:'FILL' 1}
   .session-meta{flex-shrink:0;white-space:nowrap}
   .rename-btn{background:none;border:1px solid var(--border);color:var(--text-secondary);font:var(--text-code);font-size:11px;padding:2px 8px;border-radius:4px;cursor:pointer;flex-shrink:0}
   .continue-link{flex-shrink:0;border:1px solid var(--sage);color:var(--sage);font:var(--text-code);font-size:11px;padding:2px 10px;border-radius:4px;text-decoration:none}
@@ -38,9 +42,12 @@
 
   {% if sessions %}
     {% for entry in sessions %}
-    <div class="session">
+    <div class="session{{ ' pinned' if entry.pinned else '' }}">
       <div class="session-header">
         <div class="session-title">
+          {% if entry.pinned %}
+          <span class="material-symbols-outlined pin-icon" title="Pinned">push_pin</span>
+          {% endif %}
           <span class="session-name" data-session-name="{{ entry.session_id }}">{{ entry.name }}</span>
           <button class="rename-btn" data-rename="{{ entry.session_id }}">Rename</button>
         </div>

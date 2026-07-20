@@ -36,6 +36,9 @@ from db import (
     get_messages_by_session,
     ensure_session,
     rename_session,
+    set_session_pinned,
+    hide_session,
+    get_session_meta,
     get_memory_entries,
     get_memory_stats,
     set_protocol_enabled,
@@ -556,15 +559,34 @@ def api_sessions_list():
     return {"sessions": get_sessions()}, 200
 
 @app.route("/api/sessions/<session_id>", methods=["PATCH"])
-def api_sessions_rename(session_id):
+def api_sessions_update(session_id):
+    # Handles rename and/or pin in one endpoint -- only the fields present
+    # in the body get touched, so Dashboard's pin-only toggle and Memory's
+    # rename-only edit both just send what they're changing.
     data = request.get_json() or {}
-    name = (data.get("name") or "").strip()
-    if not name:
-        return {"error": "Name can't be blank."}, 400
-    updated = rename_session(session_id, name)
-    if not updated:
-        return {"error": "No session with that id."}, 404
-    return {"session_id": session_id, "name": name}, 200
+    if "name" not in data and "pinned" not in data:
+        return {"error": "Nothing to update."}, 400
+
+    result = {"session_id": session_id}
+    if "name" in data:
+        name = (data.get("name") or "").strip()
+        if not name:
+            return {"error": "Name can't be blank."}, 400
+        rename_session(session_id, name)
+        result["name"] = name
+    if "pinned" in data:
+        pinned = bool(data.get("pinned"))
+        set_session_pinned(session_id, pinned)
+        result["pinned"] = pinned
+    return result, 200
+
+@app.route("/api/sessions/<session_id>", methods=["DELETE"])
+def api_sessions_delete(session_id):
+    # Soft delete -- hides the session from Logs/Recent Activity/Continue.
+    # Messages stay in the DB; see hide_session()'s own docstring.
+    hide_session(session_id)
+    write_activity("session_hidden", session_id[:8])
+    return {"session_id": session_id}, 200
 
 @app.route("/api/session/current", methods=["GET"])
 def api_session_current():
@@ -574,8 +596,11 @@ def api_session_current():
     if "session_id" not in session:
         session["session_id"] = str(uuid.uuid4())
     session_id = session["session_id"]
+    meta = get_session_meta(session_id)
     return {
         "session_id": session_id,
+        "name": meta["name"],
+        "pinned": meta["pinned"],
         "messages": get_messages_by_session(session_id),
     }, 200
 

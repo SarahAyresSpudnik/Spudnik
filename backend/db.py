@@ -85,9 +85,21 @@ def init_db():
         CREATE TABLE IF NOT EXISTS sessions (
             session_id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
-            created_at TEXT NOT NULL
+            created_at TEXT NOT NULL,
+            pinned INTEGER NOT NULL DEFAULT 0,
+            hidden INTEGER NOT NULL DEFAULT 0
         )
     """)
+
+    # Migration for DBs created before pinned/hidden existed -- CREATE TABLE
+    # IF NOT EXISTS above is a no-op on an already-existing table, so the
+    # new columns need adding by hand for anyone upgrading in place.
+    cursor.execute("PRAGMA table_info(sessions)")
+    existing_columns = {row["name"] for row in cursor.fetchall()}
+    if "pinned" not in existing_columns:
+        cursor.execute("ALTER TABLE sessions ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0")
+    if "hidden" not in existing_columns:
+        cursor.execute("ALTER TABLE sessions ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0")
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS protocols (
@@ -247,10 +259,11 @@ def get_recent_activity(limit=10):
 
 
 def get_sessions():
-    # One row per session_id, ordered most-recent-session-first. "Most
-    # recent" is judged by the highest message id in that session, not by
-    # timestamp -- paired user/assistant rows share identical timestamps by
-    # design, so id is the only reliable ordering signal.
+    # One row per session_id, pinned sessions first, then most-recent-first
+    # within each group. "Most recent" is judged by the highest message id
+    # in that session, not by timestamp -- paired user/assistant rows share
+    # identical timestamps by design, so id is the only reliable ordering
+    # signal. Hidden (soft-deleted) sessions are excluded entirely.
     # LEFT JOIN sessions for the real name -- falls back to a short label
     # built from the session_id for any legacy session that predates the
     # sessions table (shouldn't happen going forward, since ensure_session
@@ -264,11 +277,13 @@ def get_sessions():
                MAX(m.id) AS last_id,
                COUNT(*) AS message_count,
                MIN(m.timestamp) AS started_at,
-               s.name AS name
+               s.name AS name,
+               COALESCE(s.pinned, 0) AS pinned
         FROM messages m
         LEFT JOIN sessions s ON s.session_id = m.session_id
+        WHERE COALESCE(s.hidden, 0) = 0
         GROUP BY m.session_id
-        ORDER BY last_id DESC
+        ORDER BY pinned DESC, last_id DESC
         """
     )
     rows = cursor.fetchall()
@@ -280,6 +295,7 @@ def get_sessions():
             "name": row["name"] or f"Session {row['session_id'][:8]}",
             "message_count": row["message_count"],
             "started_at": row["started_at"],
+            "pinned": bool(row["pinned"]),
         }
         for row in rows
     ]
@@ -329,6 +345,63 @@ def rename_session(session_id, name):
     conn.commit()
     conn.close()
     return True
+
+
+def set_session_pinned(session_id, pinned, default_name=None):
+    # Same upsert pattern as rename_session -- pinning a legacy session
+    # (no sessions row yet) shouldn't silently fail either. Falls back to
+    # the exact same short-id label get_sessions() would already be
+    # displaying, so pinning never causes a surprise rename.
+    conn = get_connection()
+    cursor = conn.cursor()
+    now = datetime.now(timezone.utc).isoformat()
+    name = default_name or f"Session {session_id[:8]}"
+    cursor.execute(
+        """
+        INSERT INTO sessions (session_id, name, created_at, pinned) VALUES (?, ?, ?, ?)
+        ON CONFLICT(session_id) DO UPDATE SET pinned = excluded.pinned
+        """,
+        (session_id, name, now, 1 if pinned else 0)
+    )
+    conn.commit()
+    conn.close()
+    return True
+
+
+def hide_session(session_id):
+    # Soft delete -- marks the session hidden so it drops out of
+    # get_sessions() (and therefore Logs/Recent Activity/Continue)
+    # entirely, without touching the underlying messages rows.
+    conn = get_connection()
+    cursor = conn.cursor()
+    now = datetime.now(timezone.utc).isoformat()
+    cursor.execute(
+        """
+        INSERT INTO sessions (session_id, name, created_at, hidden) VALUES (?, ?, ?, 1)
+        ON CONFLICT(session_id) DO UPDATE SET hidden = 1
+        """,
+        (session_id, f"Session {session_id[:8]}", now)
+    )
+    conn.commit()
+    conn.close()
+    return True
+
+
+def get_session_meta(session_id):
+    # name + pinned for a single session, used by /api/session/current.
+    # Falls back to a short label when no sessions row exists yet (a
+    # session with zero messages so far, or a legacy one).
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT name, pinned FROM sessions WHERE session_id = ?",
+        (session_id,)
+    )
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return {"name": row["name"], "pinned": bool(row["pinned"])}
+    return {"name": f"Session {session_id[:8]}", "pinned": False}
 
 
 def get_messages_by_session(session_id):
