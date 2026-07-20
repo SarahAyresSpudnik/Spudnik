@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spudnik — Intro</title>
+<style>
+  :root {
+    --bg: #1A1714;
+    --bg-panel: #211D19;
+    --amber: #E8874C;
+    --sage: #8FB5A8;
+    --brown: #A87A52;
+    --text-primary: #F2EDE7;
+    --text-secondary: #B3A99C;
+    --border: #3A332C;
+  }
+
+  * { box-sizing: border-box; }
+
+  html {
+    scroll-snap-type: y proximity;
+    scroll-behavior: smooth;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: 'IBM Plex Sans', -apple-system, sans-serif;
+  }
+
+  .mono {
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+  }
+
+  .slide {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 5vw 8vw;
+    position: relative;
+    scroll-snap-align: start;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .slide.in-view {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .slide:last-child { border-bottom: none; }
+
+  .eyebrow {
+    font-size: 1.4rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--sage);
+    margin-bottom: 2rem;
+  }
+
+  h1 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: clamp(4rem, 8vw, 7.5rem);
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 0.6rem 0;
+    line-height: 1.02;
+  }
+
+  h1 .accent { color: var(--amber); }
+
+  .credit-line {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+    color: var(--text-secondary);
+    letter-spacing: 0.08em;
+    margin-top: -1.6rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .subtitle {
+    font-size: clamp(1.6rem, 2.6vw, 2.3rem);
+    color: var(--text-secondary);
+    margin-bottom: 2.5rem;
+    max-width: 34ch;
+    line-height: 1.35;
+  }
+
+  .meta-line {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.15rem;
+    color: var(--sage);
+    letter-spacing: 0.1em;
+    position: absolute;
+    top: 3vw;
+    left: 8vw;
+  }
+
+  .bullets {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2.2rem;
+    max-width: 70ch;
+  }
+
+  .bullets li {
+    font-size: clamp(1.8rem, 2.8vw, 2.5rem);
+    line-height: 1.4;
+    padding-left: 2.6rem;
+    position: relative;
+    color: var(--text-primary);
+  }
+
+  .bullets li::before {
+    content: '>';
+    position: absolute;
+    left: 0;
+    color: var(--amber);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+  }
+
+  .stack-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.6rem;
+    max-width: 90ch;
+  }
+
+  .stack-card {
+    border: 1px solid var(--border);
+    background: var(--bg-panel);
+    border-radius: 8px;
+    padding: 1.8rem 2rem;
+    border-left: 4px solid var(--amber);
+  }
+
+  .stack-card .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.15rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--sage);
+    margin-bottom: 0.6rem;
+  }
+
+  .stack-card .value {
+    font-size: 1.6rem;
+    color: var(--text-primary);
+    line-height: 1.3;
+  }
+
+  .corner-frame {
+    position: absolute;
+    width: 44px;
+    height: 44px;
+    border-color: var(--amber);
+    opacity: 0.7;
+  }
+  .corner-frame.tl { top: 3vw; left: 3vw; border-top: 3px solid; border-left: 3px solid; }
+  .corner-frame.br { bottom: 3vw; right: 3vw; border-bottom: 3px solid; border-right: 3px solid; }
+
+  /* Handoff slide */
+  .handoff-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  #potato-canvas-wrap {
+    width: 380px;
+    height: 380px;
+    margin-bottom: 2.2rem;
+    position: relative;
+  }
+
+  #potato-canvas-wrap canvas {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .audio-cue {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.3rem;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.3rem 1.8rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 2.2rem;
+    cursor: pointer;
+    transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+  }
+
+  .audio-cue:hover, .audio-cue:focus-visible {
+    border-color: var(--amber);
+    color: var(--text-primary);
+    background: rgba(232, 135, 76, 0.06);
+    outline: none;
+  }
+
+  .audio-cue.playing {
+    border-color: var(--sage);
+    color: var(--text-primary);
+  }
+
+  .audio-cue .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--sage);
+    flex-shrink: 0;
+  }
+
+  audio {
+    margin-top: 1.4rem;
+    width: 100%;
+    max-width: 560px;
+    height: 48px;
+  }
+
+  .scroll-hint {
+    position: fixed;
+    bottom: 2.5vw;
+    right: 3vw;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+    color: var(--text-secondary);
+    letter-spacing: 0.06em;
+    z-index: 10;
+    background: rgba(26, 23, 20, 0.6);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+  <!-- SLIDE 1: TITLE -->
+  <section class="slide">
+    <div class="corner-frame tl"></div>
+    <div class="corner-frame br"></div>
+    <div class="eyebrow mono">AI I // FINAL PROJECT</div>
+    <h1>SPUDNIK<span class="accent">_</span></h1>
+    <div class="subtitle">A personal AI assistant, built to replace the commercial ones — running on a mentally unstable potato computer.</div>
+    <div class="credit-line">BUILT BY SARAH AYRES</div>
+    <div class="meta-line">SYS.MONITOR // BUILD_PRESENTATION // LOCAL_HOST</div>
+  </section>
+
+  <!-- SLIDE 2: WHY -->
+  <section class="slide">
+    <div class="eyebrow mono">// 01 THE PROBLEM</div>
+    <h1 style="font-size: clamp(3rem, 5.5vw, 5rem);">Why build this?</h1>
+    <ul class="bullets">
+      <li>Because being told you're right when you're not isn't help — it's just easier for the assistant.</li>
+      <li>Because a personality-less tool can't actually be a collaborator, no matter how well it answers.</li>
+      <li>Because when humanoid robots actually show up, who do you want standing next to you — a sarcastic, awkward robot who thinks he's a potato, or a bland one that'll do whatever it's told with zero pushback?</li>
+    </ul>
+  </section>
+
+  <!-- SLIDE 3: TECH STACK -->
+  <section class="slide">
+    <div class="eyebrow mono">// 02 HOW IT'S BUILT</div>
+    <h1 style="font-size: clamp(3rem, 5.5vw, 5rem);">The stack</h1>
+    <div class="stack-grid">
+      <div class="stack-card">
+        <div class="label">Backend</div>
+        <div class="value">Python / Flask + SQLite</div>
+      </div>
+      <div class="stack-card">
+        <div class="label">Model Layer</div>
+        <div class="value">Model-agnostic llm_adapter.py — Ollama (local) or Claude API</div>
+      </div>
+      <div class="stack-card">
+        <div class="label">Frontend</div>
+        <div class="value">PWA, desktop / phone / car ready</div>
+      </div>
+      <div class="stack-card">
+        <div class="label">Voice</div>
+        <div class="value">Chatterbox TTS, cloned voice reference</div>
+      </div>
+      <div class="stack-card">
+        <div class="label">Hardware</div>
+        <div class="value">Lazarus (dev/GPU), OmniBook (demo)</div>
+      </div>
+      <div class="stack-card">
+        <div class="label">Memory</div>
+        <div class="value">SQLite-backed, persistent across sessions</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 4: HANDOFF TO TATER -->
+  <section class="slide">
+    <div class="handoff-wrap">
+      <div id="potato-canvas-wrap"></div>
+      <div class="eyebrow mono">// 03 HANDOFF</div>
+      <h1 style="font-size: clamp(3.2rem, 6vw, 5.5rem);">Now — meet Tater.</h1>
+      <div class="audio-cue" id="playTaterIntro" role="button" tabindex="0">
+        <span class="dot" id="playDot"></span>
+        <span id="playLabel">CLICK TO PLAY TATER'S INTRO</span>
+      </div>
+      <audio id="taterAudio" style="display:none;">
+        <source src="tater-intro.mp3" type="audio/mpeg">
+      </audio>
+    </div>
+  </section>
+
+<div class="scroll-hint">SCROLL TO CONTINUE ↓</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+  // fade sections in as they scroll into view
+  const slides = document.querySelectorAll('.slide');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) entry.target.classList.add('in-view');
+    });
+  }, { threshold: 0.25 });
+  slides.forEach(s => observer.observe(s));
+
+  (function initPotatoOrb() {
+    const wrap = document.getElementById('potato-canvas-wrap');
+    if (!wrap || typeof THREE === 'undefined') return;
+
+    const size = 380;
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+    camera.position.set(0, 0, 7.4);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(size, size);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    wrap.appendChild(renderer.domElement);
+
+    const particlesCount = 2200;
+    const sphereRadius = 1.7;
+    const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+
+    const vertices = [];
+    const unitPoints = [];
+
+    for (let i = 0; i < particlesCount; i++) {
+      // --- POTATO SHAPE ---
+      // Tuned values: lumpiness 0.16, elongation 1.18
+      const y = 1 - (i / (particlesCount - 1)) * 2;
+      const radius = Math.sqrt(1 - y * y);
+      const theta = goldenAngle * i;
+      const ux = Math.cos(theta) * radius;
+      const uy = y;
+      const uz = Math.sin(theta) * radius;
+      const lump =
+        1.0 +
+        0.16 * Math.sin(ux * 2.3 + uy * 1.7) +
+        0.112 * Math.sin(uy * 3.1 + uz * 2.2) +
+        0.08 * Math.sin(uz * 2.8 + ux * 3.4);
+      const posX = ux * sphereRadius * lump * 0.78;
+      const posY = uy * sphereRadius * lump * 1.18;
+      const posZ = uz * sphereRadius * lump * 0.72;
+      vertices.push(posX, posY, posZ);
+      unitPoints.push(new THREE.Vector3(ux, uy, uz));
+    }
+
+    // --- POTATO EYES (SPOTS) ---
+    // Tuned values: spotCount 30, spotRadius 0.28
+    const spotCount = 30;
+    const spots = [];
+    for (let s = 0; s < spotCount; s++) {
+      const sy = Math.random() * 2 - 1;
+      const sr = Math.sqrt(1 - sy * sy);
+      const st = Math.random() * Math.PI * 2;
+      spots.push(new THREE.Vector3(Math.cos(st) * sr, sy, Math.sin(st) * sr));
+    }
+    const baseColorObj = new THREE.Color('#E8874C');
+    const spotColor = new THREE.Color('#A87A52');
+    const spotRadius = 0.28;
+
+    const instanceColors = new Float32Array(particlesCount * 3);
+    for (let i = 0; i < particlesCount; i++) {
+      const idx = i * 3;
+      const p = unitPoints[i].clone().normalize();
+      let inSpot = false;
+      for (let s = 0; s < spots.length; s++) {
+        if (p.distanceTo(spots[s]) < spotRadius) { inSpot = true; break; }
+      }
+      const c = inSpot ? spotColor : baseColorObj;
+      instanceColors[idx] = c.r;
+      instanceColors[idx + 1] = c.g;
+      instanceColors[idx + 2] = c.b;
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(instanceColors, 3));
+
+    const material = new THREE.PointsMaterial({
+      size: 0.09,
+      vertexColors: true,
+      sizeAttenuation: true,
+      transparent: true,
+      opacity: 0.95
+    });
+
+    const points = new THREE.Points(geometry, material);
+    scene.add(points);
+
+    function animate() {
+      requestAnimationFrame(animate);
+      points.rotation.y += 0.004;
+      points.rotation.x = Math.sin(Date.now() * 0.0002) * 0.08;
+      renderer.render(scene, camera);
+    }
+    animate();
+  })();
+
+  // handoff slide — play button
+  (function initPlayButton() {
+    const btn = document.getElementById('playTaterIntro');
+    const audio = document.getElementById('taterAudio');
+    const label = document.getElementById('playLabel');
+    if (!btn || !audio) return;
+
+    function trigger() {
+      if (audio.paused) {
+        audio.play().catch(() => {
+          label.textContent = "COULDN'T PLAY — CHECK tater-intro.mp3 IS NEXT TO THIS FILE";
+        });
+      }
+    }
+
+    btn.addEventListener('click', trigger);
+    btn.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); trigger(); }
+    });
+
+    audio.addEventListener('play', () => {
+      btn.classList.add('playing');
+      label.textContent = 'TATER IS SPEAKING…';
+    });
+    audio.addEventListener('ended', () => {
+      btn.classList.remove('playing');
+      label.textContent = 'CLICK TO REPLAY';
+    });
+  })();
+</script>
+
+</body>
+</html>
