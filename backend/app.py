@@ -34,9 +34,23 @@ from db import (
     get_recent_activity,
     get_sessions,
     get_messages_by_session,
+    ensure_session,
+    rename_session,
+    get_memory_entries,
+    get_memory_stats,
+    set_protocol_enabled,
+    set_all_protocols_enabled,
+    get_devices,
+    add_device,
+    update_device,
+    delete_device,
 )
 
 from rate_limit_state import get_rate_limit
+
+from persona_loader import list_protocols
+
+import news_fetcher
 
 app = Flask(
     __name__,
@@ -205,6 +219,13 @@ def landing():
 
 @app.route("/dashboard")
 def dashboard():
+    # "Continue" on a session (Logs page / Recent Activity) links here with
+    # ?session=<id> -- overwrite this browser's session_id cookie with the
+    # requested one before the SPA loads, so /api/session/current picks up
+    # that conversation's history instead of whatever was there before.
+    requested_session = request.args.get("session")
+    if requested_session:
+        session["session_id"] = requested_session
     return render_template("dashboard.html")
 
 # DEFINE the /health route
@@ -243,6 +264,10 @@ def chat_text():
         phrase = random.choice(CHAT_ERROR_RESPONSES["error_input"])
         # RETURN it in the same shape as before, persona voice instead of flat string
         return {"error": phrase}, 400
+
+    # REGISTER this session (auto-named from this message) the first time
+    # it's ever seen -- a no-op on every later call, same session.
+    ensure_session(session_id, first_message=message)
 
     # CHECK for the memory-write trigger before anything else --
     # short-circuits before get_response(), never touches the LLM or messages table
@@ -438,6 +463,121 @@ def reboot_system():
     write_activity("reboot")
     phrase = random.choice(REBOOT_RESPONSES["reboot_done"])
     return {"response": phrase}, 200
+
+@app.route("/api/memory", methods=["GET"])
+def api_memory():
+    return {
+        "entries": get_memory_entries(),
+        "stats": get_memory_stats(),
+    }, 200
+
+@app.route("/api/protocols", methods=["GET"])
+def api_protocols():
+    protocols = list_protocols()
+    return {
+        "protocols": protocols,
+        "active_count": sum(1 for p in protocols if p["enabled"]),
+    }, 200
+
+@app.route("/api/protocols/<path:filename>/toggle", methods=["POST"])
+def api_protocol_toggle(filename):
+    data = request.get_json()
+    enabled = bool(data.get("enabled")) if data else False
+    set_protocol_enabled(filename, enabled)
+    write_activity("protocol_toggled", f"{filename} -> {'on' if enabled else 'off'}")
+    return {"filename": filename, "enabled": enabled}, 200
+
+@app.route("/api/protocols/bulk", methods=["POST"])
+def api_protocols_bulk():
+    # Settings page's master slider -- bulk-sets every protocol currently
+    # found on disk to the same on/off state.
+    data = request.get_json()
+    enabled = bool(data.get("enabled")) if data else False
+    filenames = [p["filename"] for p in list_protocols()]
+    set_all_protocols_enabled(filenames, enabled)
+    write_activity("protocols_bulk_toggled", "on" if enabled else "off")
+    return {"enabled": enabled, "count": len(filenames)}, 200
+
+@app.route("/api/devices", methods=["GET"])
+def api_devices_list():
+    return {"devices": get_devices()}, 200
+
+DEVICE_STATUSES = {"link_active", "standby", "disconnected"}
+
+@app.route("/api/devices", methods=["POST"])
+def api_devices_create():
+    data = request.get_json() or {}
+    name = (data.get("name") or "").strip()
+    if not name:
+        return {"error": "A device needs a name."}, 400
+    status = data.get("status", "standby")
+    if status not in DEVICE_STATUSES:
+        status = "standby"
+
+    new_id = add_device(
+        name=name,
+        category=data.get("category", ""),
+        spec=data.get("spec", ""),
+        role=data.get("role", ""),
+        aside=data.get("aside", ""),
+        status=status,
+    )
+    write_activity("device_added", name)
+    return {"id": new_id}, 201
+
+@app.route("/api/devices/<int:device_id>", methods=["PATCH"])
+def api_devices_update(device_id):
+    data = request.get_json() or {}
+    editable = {"name", "category", "spec", "role", "aside", "status"}
+    fields = {k: v for k, v in data.items() if k in editable}
+    if "status" in fields and fields["status"] not in DEVICE_STATUSES:
+        return {"error": "Not a real status option."}, 400
+
+    updated = update_device(device_id, fields)
+    if not updated:
+        return {"error": "No device with that id."}, 404
+    write_activity("device_updated", f"#{device_id}")
+    return {"id": device_id}, 200
+
+@app.route("/api/devices/<int:device_id>", methods=["DELETE"])
+def api_devices_delete(device_id):
+    deleted = delete_device(device_id)
+    if not deleted:
+        return {"error": "No device with that id."}, 404
+    write_activity("device_deleted", f"#{device_id}")
+    return {"id": device_id}, 200
+
+@app.route("/api/news", methods=["GET"])
+def api_news():
+    return {"sources": news_fetcher.get_news()}, 200
+
+@app.route("/api/sessions", methods=["GET"])
+def api_sessions_list():
+    return {"sessions": get_sessions()}, 200
+
+@app.route("/api/sessions/<session_id>", methods=["PATCH"])
+def api_sessions_rename(session_id):
+    data = request.get_json() or {}
+    name = (data.get("name") or "").strip()
+    if not name:
+        return {"error": "Name can't be blank."}, 400
+    updated = rename_session(session_id, name)
+    if not updated:
+        return {"error": "No session with that id."}, 404
+    return {"session_id": session_id, "name": name}, 200
+
+@app.route("/api/session/current", methods=["GET"])
+def api_session_current():
+    # Whatever session_id this browser's cookie currently holds (creating
+    # one if this is a first-ever visit) plus its full message history --
+    # Presence reads this on mount so Continue/normal flow both "just work."
+    if "session_id" not in session:
+        session["session_id"] = str(uuid.uuid4())
+    session_id = session["session_id"]
+    return {
+        "session_id": session_id,
+        "messages": get_messages_by_session(session_id),
+    }, 200
 
 @app.route("/logs", methods=["GET"])
 def logs_page():

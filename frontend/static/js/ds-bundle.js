@@ -481,7 +481,8 @@ function CatDogDen() {
 function Sidebar({
   activeTab,
   onNavigate,
-  onReboot
+  onReboot,
+  statusLine
 }) {
   const items = [{
     icon: 'psychology',
@@ -493,8 +494,8 @@ function Sidebar({
     icon: 'security',
     label: 'Protocols'
   }, {
-    icon: 'code',
-    label: 'Terminal'
+    icon: 'settings',
+    label: 'Settings'
   }, {
     icon: 'memory',
     label: 'Hardware'
@@ -531,14 +532,16 @@ function Sidebar({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       font: 'var(--text-headline-sm)',
-      color: 'var(--amber)'
+      color: 'var(--amber)',
+      lineHeight: 1.3
     }
-  }, "TATER_V1"), /*#__PURE__*/React.createElement("div", {
+  }, "POTATO V2 SPUDNIK VARIANT"), /*#__PURE__*/React.createElement("div", {
     style: {
       font: 'var(--text-label-caps)',
-      color: 'var(--sage)'
+      color: 'var(--sage)',
+      marginTop: 4
     }
-  }, "STATUS: NOMINAL")), /*#__PURE__*/React.createElement("div", {
+  }, statusLine)), /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1,
       display: 'flex',
@@ -718,29 +721,13 @@ function RootBeerGauge({
     }
   }, subtitle))));
 }
-function formatActivity(item) {
-  const time = item.timestamp ? item.timestamp.slice(11, 16) : '';
-  switch (item.event_type) {
-    case 'message':
-      return `[${time}] Message sent: "${item.detail || ''}"`;
-    case 'reviewer_mode':
-      return `[${time}] Reviewer Mode switched ${item.detail}.`;
-    case 'model_changed':
-      return `[${time}] Claude model changed to ${item.detail}.`;
-    case 'key_replaced':
-      return `[${time}] API key replaced.`;
-    case 'key_deactivated':
-      return `[${time}] API key deactivated.`;
-    case 'reboot':
-      return `[${time}] System rebooted.`;
-    default:
-      return `[${time}] ${item.event_type}`;
-  }
+function continueSession(sessionId) {
+  window.location.href = `/dashboard?session=${encodeURIComponent(sessionId)}`;
 }
 function RecentActivityCard({
-  activity
+  sessions
 }) {
-  const items = activity || [];
+  const items = sessions || [];
   return /*#__PURE__*/React.createElement(Card, {
     title: "Recent Activity"
   }, items.length ? /*#__PURE__*/React.createElement("ul", {
@@ -750,22 +737,54 @@ function RecentActivityCard({
       padding: 0,
       display: 'flex',
       flexDirection: 'column',
-      gap: 8,
-      font: 'var(--text-code)',
-      color: 'var(--text-secondary)'
+      gap: 10
     }
-  }, items.map((item, i) => /*#__PURE__*/React.createElement("li", {
-    key: i,
+  }, items.slice(0, 6).map((s, i) => /*#__PURE__*/React.createElement("li", {
+    key: s.session_id,
     style: {
       display: 'flex',
-      gap: 8,
-      opacity: i === 0 ? 1 : 0.7
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: 10,
+      paddingBottom: 10,
+      borderBottom: i < Math.min(items.length, 6) - 1 ? '1px solid var(--border)' : 'none'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 2,
+      overflow: 'hidden',
+      minWidth: 0
     }
   }, /*#__PURE__*/React.createElement("span", {
     style: {
-      color: 'var(--amber)'
+      font: 'var(--text-label)',
+      color: 'var(--text-primary)',
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis'
     }
-  }, ">"), formatActivity(item)))) : /*#__PURE__*/React.createElement("p", {
+  }, s.name), /*#__PURE__*/React.createElement("span", {
+    style: {
+      font: 'var(--text-code)',
+      fontSize: 11,
+      color: 'var(--text-secondary)'
+    }
+  }, `${s.message_count} message${s.message_count === 1 ? '' : 's'}`)), /*#__PURE__*/React.createElement("button", {
+    onClick: () => continueSession(s.session_id),
+    style: {
+      flexShrink: 0,
+      padding: '4px 12px',
+      border: '1px solid var(--sage)',
+      background: 'transparent',
+      color: 'var(--sage)',
+      font: 'var(--text-code)',
+      fontSize: 11,
+      cursor: 'pointer',
+      borderRadius: 4
+    }
+  }, "Continue")))) : /*#__PURE__*/React.createElement("p", {
     style: {
       font: 'var(--text-body-sm)',
       color: 'var(--text-secondary)',
@@ -773,96 +792,23 @@ function RecentActivityCard({
       padding: '24px 0',
       margin: 0
     }
-  }, "Nothing yet. Do something and it'll show up here."));
+  }, "No sessions yet. Say something and it'll show up here."));
 }
-const protocolDefs = [{
-  id: 'file-creation',
-  title: 'File-Creation Gate',
-  filename: 'tater-protocol-file-creation.md',
-  summary: 'Checks before Tater is allowed to write a new file to disk.'
+const DEVICE_STATUS_OPTIONS = [{
+  value: 'link_active',
+  label: 'Link Active',
+  dotStatus: 'success'
 }, {
-  id: 'squirrel',
-  title: 'Squirrel Protocol',
-  filename: 'tater-protocol-squirrel.md',
-  summary: 'Handles topic derailment — when to let a tangent run and when to snap back.'
+  value: 'standby',
+  label: 'Standby',
+  dotStatus: 'idle'
 }, {
-  id: 'handoff',
-  title: 'Handoff Protocol',
-  filename: 'tater-protocol-handoff.md',
-  summary: 'Rules for passing a task to another agent or tool mid-session.'
-}, {
-  id: 'persona-scope',
-  title: 'Persona-Scope Protocol',
-  filename: 'tater-protocol-persona-scope.md',
-  summary: 'Keeps the sarcasm module from bleeding into safety-critical responses.'
-}, {
-  id: 'agent-research',
-  title: 'Agent-Research Protocol',
-  filename: 'tater-protocol-agent-research.md',
-  summary: 'Governs when Tater is allowed to go fetch outside information on its own.'
+  value: 'disconnected',
+  label: 'Disconnected',
+  dotStatus: 'error'
 }];
-const memoryEntries = [{
-  content: "User asked me to stop narrating the weather in haiku form. Filed under: requests I will selectively honor.",
-  timestamp: "2026-07-17 23:41"
-}, {
-  content: "Determined that \"left the stove on\" was said sarcastically. Threat level: none. Confidence: 62%.",
-  timestamp: "2026-07-17 19:02"
-}, {
-  content: "User's coffee order changed to oat milk. Updating world model accordingly.",
-  timestamp: "2026-07-16 08:15"
-}, {
-  content: "Reminded user to reboot after the driver update. User ignored me. As expected.",
-  timestamp: "2026-07-14 21:30"
-}];
-const devices = [{
-  name: 'Lazarus',
-  category: 'DESKTOP',
-  spec: 'i9-12900KF · RTX 3090',
-  role: 'Primary dev / Ollama machine · Claude Code installed',
-  aside: 'where the thinking actually happens',
-  active: true,
-  dotStatus: 'success',
-  dotLabel: 'LINK ACTIVE'
-}, {
-  name: 'OmniBook X Flip 16',
-  category: 'LAPTOP',
-  spec: 'Intel Core Ultra · CPU-only',
-  role: 'Demo / presentation device',
-  aside: '',
-  active: false,
-  dotStatus: 'idle',
-  dotLabel: 'STANDBY'
-}, {
-  name: 'The Brick',
-  category: 'HANDHELD',
-  spec: 'Ayn Thor Pro',
-  role: 'Handheld',
-  aside: '',
-  active: false,
-  dotStatus: 'idle',
-  dotLabel: 'STANDBY'
-}];
-const newsFeed = [{
-  title: 'Local inference gets cheaper',
-  summary: 'Stub entry — sourcing for this feed (live pull vs. manually logged) not yet decided.',
-  timestamp: '2026-07-17'
-}, {
-  title: 'New handheld APU benchmarks',
-  summary: 'Stub entry — mock content only, no live source wired.',
-  timestamp: '2026-07-15'
-}, {
-  title: 'VR headset firmware update',
-  summary: 'Stub entry — placeholder until news sourcing is confirmed.',
-  timestamp: '2026-07-13'
-}];
-function mockReply(cmd) {
-  const c = cmd.trim().toLowerCase();
-  if (!c) return 'No input received.';
-  if (c === 'help') return 'Commands: status, db.check, llm.switch <provider>, help';
-  if (c === 'status') return 'STATUS: NOMINAL // uptime 4h12m // mock data';
-  if (c === 'db.check') return 'DB connection: mock OK (no live query executed).';
-  if (c.startsWith('llm.switch')) return 'Provider switch not wired yet — stub only.';
-  return 'Command not recognized. (No backend endpoint wired — mock response.)';
+function deviceStatusMeta(status) {
+  return DEVICE_STATUS_OPTIONS.find(o => o.value === status) || DEVICE_STATUS_OPTIONS[1];
 }
 // Current Claude model set -- verified against Anthropic's model catalog,
 // kept in sync with CLAUDE_MODEL_CHOICES in backend/app.py.
@@ -1030,32 +976,364 @@ function ApiKeyCard({
     }
   }, message) : null);
 }
+const deviceInputStyle = {
+  width: '100%',
+  background: 'var(--bg-void)',
+  border: '1px solid var(--border)',
+  color: 'var(--text-primary)',
+  font: 'var(--text-code)',
+  padding: 8,
+  borderRadius: 4,
+  marginBottom: 8,
+  boxSizing: 'border-box'
+};
+function DeviceForm({
+  initial,
+  submitLabel,
+  onSubmit,
+  onCancel
+}) {
+  const [form, setForm] = React.useState(initial);
+  function field(key) {
+    return {
+      value: form[key] || '',
+      onChange: e => setForm(f => ({
+        ...f,
+        [key]: e.target.value
+      }))
+    };
+  }
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("input", _extends({
+    placeholder: "Name"
+  }, field('name'), {
+    style: deviceInputStyle
+  })), /*#__PURE__*/React.createElement("input", _extends({
+    placeholder: "Category (e.g. DESKTOP, LAPTOP, HANDHELD)"
+  }, field('category'), {
+    style: deviceInputStyle
+  })), /*#__PURE__*/React.createElement("input", _extends({
+    placeholder: "Spec"
+  }, field('spec'), {
+    style: deviceInputStyle
+  })), /*#__PURE__*/React.createElement("input", _extends({
+    placeholder: "Role"
+  }, field('role'), {
+    style: deviceInputStyle
+  })), /*#__PURE__*/React.createElement("input", _extends({
+    placeholder: "Aside (optional flavor line)"
+  }, field('aside'), {
+    style: deviceInputStyle
+  })), /*#__PURE__*/React.createElement("select", _extends({}, field('status'), {
+    style: deviceInputStyle
+  }), DEVICE_STATUS_OPTIONS.map(opt => /*#__PURE__*/React.createElement("option", {
+    key: opt.value,
+    value: opt.value
+  }, opt.label))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => onSubmit(form),
+    style: keyButtonStyle
+  }, submitLabel), onCancel ? /*#__PURE__*/React.createElement("button", {
+    onClick: onCancel,
+    style: keyButtonGhostStyle
+  }, "Cancel") : null));
+}
+function DeviceCard({
+  device,
+  onChanged
+}) {
+  const [editing, setEditing] = React.useState(false);
+  const meta = deviceStatusMeta(device.status);
+  function patch(fields) {
+    fetch(`/api/devices/${device.id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(fields)
+    }).then(() => onChanged());
+  }
+  function del() {
+    if (!window.confirm(`Delete ${device.name}? This can't be undone.`)) return;
+    fetch(`/api/devices/${device.id}`, {
+      method: 'DELETE'
+    }).then(() => onChanged());
+  }
+  if (editing) {
+    return /*#__PURE__*/React.createElement(Card, {
+      title: `Edit — ${device.name}`,
+      icon: "memory",
+      accent: "amber"
+    }, /*#__PURE__*/React.createElement(DeviceForm, {
+      initial: device,
+      submitLabel: "Save",
+      onCancel: () => setEditing(false),
+      onSubmit: form => {
+        patch(form);
+        setEditing(false);
+      }
+    }));
+  }
+  return /*#__PURE__*/React.createElement(Card, {
+    title: device.name,
+    icon: "memory",
+    accent: "amber"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      gap: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 6
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      font: 'var(--text-label-caps)',
+      color: 'var(--sage)',
+      letterSpacing: '.05em'
+    }
+  }, device.category), /*#__PURE__*/React.createElement("span", {
+    style: {
+      font: 'var(--text-body-sm)',
+      color: 'var(--text-primary)'
+    }
+  }, device.spec), /*#__PURE__*/React.createElement("span", {
+    style: {
+      font: 'var(--text-body-sm)',
+      color: 'var(--text-secondary)'
+    }
+  }, device.role), device.aside ? /*#__PURE__*/React.createElement("span", {
+    style: {
+      font: 'var(--text-code)',
+      fontSize: 12,
+      color: 'var(--sage)',
+      fontStyle: 'italic'
+    }
+  }, device.aside) : null), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'flex-end',
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement(StatusDot, {
+    status: meta.dotStatus,
+    label: meta.label,
+    glow: device.status === 'link_active'
+  }), /*#__PURE__*/React.createElement("select", {
+    value: device.status,
+    onChange: e => patch({
+      status: e.target.value
+    }),
+    style: {
+      background: 'var(--bg-void)',
+      border: '1px solid var(--border)',
+      color: 'var(--text-primary)',
+      font: 'var(--text-code)',
+      fontSize: 11,
+      padding: 4,
+      borderRadius: 4
+    }
+  }, DEVICE_STATUS_OPTIONS.map(opt => /*#__PURE__*/React.createElement("option", {
+    key: opt.value,
+    value: opt.value
+  }, opt.label))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 6
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setEditing(true),
+    style: { ...keyButtonGhostStyle,
+      padding: '4px 10px',
+      fontSize: 11
+    }
+  }, "Edit"), /*#__PURE__*/React.createElement("button", {
+    onClick: del,
+    style: { ...keyButtonDangerStyle,
+      padding: '4px 10px',
+      fontSize: 11
+    }
+  }, "Delete")))));
+}
+function AddDeviceCard({
+  onChanged
+}) {
+  const [open, setOpen] = React.useState(false);
+  if (!open) {
+    return /*#__PURE__*/React.createElement("button", {
+      onClick: () => setOpen(true),
+      style: {
+        width: '100%',
+        textAlign: 'center',
+        padding: '12px 16px',
+        border: '1px dashed var(--border-strong)',
+        background: 'transparent',
+        color: 'var(--sage)',
+        font: 'var(--text-label)',
+        cursor: 'pointer',
+        borderRadius: 8
+      }
+    }, "+ Add Device");
+  }
+  return /*#__PURE__*/React.createElement(Card, {
+    title: "Add Device",
+    icon: "memory",
+    accent: "amber"
+  }, /*#__PURE__*/React.createElement(DeviceForm, {
+    initial: {
+      name: '',
+      category: '',
+      spec: '',
+      role: '',
+      aside: '',
+      status: 'standby'
+    },
+    submitLabel: "Add",
+    onCancel: () => setOpen(false),
+    onSubmit: form => {
+      if (!form.name || !form.name.trim()) return;
+      fetch('/api/devices', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(form)
+      }).then(() => {
+        setOpen(false);
+        onChanged();
+      });
+    }
+  }));
+}
 function DashboardApp() {
   const [activeTab, setActiveTab] = React.useState('Presence');
   const [expanded, setExpanded] = React.useState({});
-  const [terminalValue, setTerminalValue] = React.useState('');
   const [sidebarStatus, setSidebarStatus] = React.useState(null);
-  const [scrollback, setScrollback] = React.useState([{
-    isResponse: true,
-    text: '// mock console — backend not yet wired to llm_adapter.py. Responses below are stubbed.'
-  }]);
-  const scrollRef = React.useRef(null);
-  React.useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [scrollback]);
+  const [chatMessages, setChatMessages] = React.useState([]);
+  const [chatValue, setChatValue] = React.useState('');
+  const [chatBusy, setChatBusy] = React.useState(false);
+  const [sessionsList, setSessionsList] = React.useState([]);
+  const [memoryData, setMemoryData] = React.useState({
+    entries: [],
+    stats: {
+      total_entries: 0,
+      last_write: null
+    }
+  });
+  const [protocolsData, setProtocolsData] = React.useState({
+    protocols: [],
+    active_count: 0
+  });
+  const [devicesList, setDevicesList] = React.useState([]);
+  const [newsData, setNewsData] = React.useState([]);
   function refreshStatus() {
     fetch('/api/sidebar-status').then(r => r.json()).then(setSidebarStatus).catch(() => {});
   }
+  function refreshSessions() {
+    fetch('/api/sessions').then(r => r.json()).then(data => setSessionsList(data.sessions || [])).catch(() => {});
+  }
+  function refreshMemory() {
+    fetch('/api/memory').then(r => r.json()).then(setMemoryData).catch(() => {});
+  }
+  function refreshProtocols() {
+    fetch('/api/protocols').then(r => r.json()).then(setProtocolsData).catch(() => {});
+  }
+  function handleProtocolToggle(filename, enabled) {
+    fetch(`/api/protocols/${encodeURIComponent(filename)}/toggle`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        enabled
+      })
+    }).then(() => refreshProtocols());
+  }
+  function handleProtocolsBulkToggle(enabled) {
+    fetch('/api/protocols/bulk', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        enabled
+      })
+    }).then(() => refreshProtocols());
+  }
+  function refreshDevices() {
+    fetch('/api/devices').then(r => r.json()).then(data => setDevicesList(data.devices || [])).catch(() => {});
+  }
+  function refreshNews() {
+    fetch('/api/news').then(r => r.json()).then(data => setNewsData(data.sources || [])).catch(() => {});
+  }
   React.useEffect(() => {
     refreshStatus();
+    refreshSessions();
+    refreshMemory();
+    refreshProtocols();
+    refreshDevices();
+    refreshNews();
+    fetch('/api/session/current').then(r => r.json()).then(data => {
+      setChatMessages(data.messages || []);
+    }).catch(() => {});
   }, []);
+  function handleChatSubmit() {
+    const message = chatValue;
+    if (!message.trim() || chatBusy) return;
+    setChatBusy(true);
+    setChatValue('');
+    fetch('/chat/text', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        message
+      })
+    }).then(r => r.json().then(data => ({
+      ok: r.ok,
+      data
+    }))).then(({
+      ok,
+      data
+    }) => {
+      setChatBusy(false);
+      if (ok) {
+        setChatMessages(m => [...m, {
+          role: 'user',
+          content: message
+        }, {
+          role: 'assistant',
+          content: data.response
+        }]);
+        refreshStatus();
+        refreshSessions();
+        refreshMemory();
+      } else {
+        setChatMessages(m => [...m, {
+          role: 'assistant',
+          content: data.error || "Something went wrong and I don't want to talk about it."
+        }]);
+      }
+    }).catch(() => {
+      setChatBusy(false);
+    });
+  }
   const provider = sidebarStatus && sidebarStatus.provider ? sidebarStatus.provider.active : null;
   const providerConnected = sidebarStatus && sidebarStatus.provider ? sidebarStatus.provider.connected : false;
   const reviewerOn = sidebarStatus ? sidebarStatus.reviewer_mode : false;
   const claudeModel = sidebarStatus ? sidebarStatus.model : '';
   const keyPresent = sidebarStatus ? sidebarStatus.key_present : false;
   const rateLimit = sidebarStatus ? sidebarStatus.rate_limit : {};
-  const activity = sidebarStatus ? sidebarStatus.activity : [];
   function handleModelChange(model) {
     fetch('/api/model', {
       method: 'POST',
@@ -1087,38 +1365,38 @@ function DashboardApp() {
   const isPresence = activeTab === 'Presence';
   const isMemory = activeTab === 'Memory';
   const isProtocols = activeTab === 'Protocols';
-  const isTerminal = activeTab === 'Terminal';
+  const isSettings = activeTab === 'Settings';
   const isHardware = activeTab === 'Hardware';
+  const memoryEntries = memoryData.entries;
   const hasEntries = memoryEntries.length > 0;
+  // Reflects whichever provider/model is genuinely active right now --
+  // same provider/providerConnected values that drive the LLM Provider
+  // card, not a second detection mechanism.
+  let providerSegment = 'NO PROVIDER';
+  if (provider === 'claude' && providerConnected) {
+    const modelOpt = CLAUDE_MODEL_OPTIONS.find(o => o.value === claudeModel);
+    providerSegment = (modelOpt ? modelOpt.label : 'CLAUDE').toUpperCase();
+  } else if (provider === 'ollama' && providerConnected) {
+    providerSegment = 'OLLAMA';
+  }
+  const sidebarStatusLine = provider === 'claude' && providerConnected ? 'STATUS: BORROWED BRAIN' : provider === 'ollama' && providerConnected ? 'STATUS: MY BRAIN' : 'STATUS: BRAINLESS';
   let headerTitle = 'Spudnik_Presence',
-    headerSubtitle = 'SYS.MONITOR // VER 1.0.4 // LOCAL_HOST';
+    headerSubtitle = `SYS.MONITOR // ${providerSegment} // LOCAL_HOST`;
   if (isMemory) {
     headerTitle = 'Spudnik_Memory';
-    headerSubtitle = 'MEM.INDEX // VER 1.0.4 // LOCAL_HOST';
+    headerSubtitle = `MEM.INDEX // ${providerSegment} // LOCAL_HOST`;
   }
   if (isProtocols) {
     headerTitle = 'Spudnik_Protocols';
-    headerSubtitle = 'RULESET // VER 1.0.4 // LOCAL_HOST';
+    headerSubtitle = `RULESET // ${providerSegment} // LOCAL_HOST`;
   }
-  if (isTerminal) {
-    headerTitle = 'Spudnik_Terminal';
-    headerSubtitle = 'CONSOLE // VER 1.0.4 // LOCAL_HOST';
+  if (isSettings) {
+    headerTitle = 'Spudnik_Settings';
+    headerSubtitle = `CONFIG // ${providerSegment} // LOCAL_HOST`;
   }
   if (isHardware) {
     headerTitle = 'Spudnik_Hardware';
-    headerSubtitle = 'DEVICES // VER 1.0.4 // LOCAL_HOST';
-  }
-  function handleTerminalSubmit() {
-    const cmd = terminalValue;
-    if (!cmd.trim()) return;
-    setScrollback(s => [...s, {
-      isCommand: true,
-      text: cmd
-    }, {
-      isResponse: true,
-      text: mockReply(cmd)
-    }]);
-    setTerminalValue('');
+    headerSubtitle = `DEVICES // ${providerSegment} // LOCAL_HOST`;
   }
   function renderPresence() {
     const claudeCardStyle = provider !== 'claude' ? {
@@ -1128,6 +1406,8 @@ function DashboardApp() {
       opacity: 1
     };
     const providerLabel = provider === 'claude' ? 'Claude' : 'Ollama (Local)';
+    const lastReply = [...chatMessages].reverse().find(m => m.role === 'assistant');
+    const quoteText = lastReply ? lastReply.content : "I'm not saying I'm bored, but I just computed pi to the last digit twice.";
     return /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'grid',
@@ -1151,7 +1431,12 @@ function DashboardApp() {
         font: 'var(--text-headline-sm)',
         margin: 0
       }
-    }, "\"I'm not saying I'm bored, but I just computed pi to the last digit twice.\"")), /*#__PURE__*/React.createElement(TerminalInput, null)), /*#__PURE__*/React.createElement("div", {
+    }, `"${quoteText}"`)), /*#__PURE__*/React.createElement(TerminalInput, {
+      value: chatValue,
+      onChange: e => setChatValue(e.target.value),
+      onSubmit: handleChatSubmit,
+      placeholder: chatBusy ? 'Thinking...' : 'Talk to Tater...'
+    })), /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         flexDirection: 'column',
@@ -1239,7 +1524,7 @@ function DashboardApp() {
       limit: rateLimit ? rateLimit.limit : null,
       remaining: rateLimit ? rateLimit.remaining : null
     }), /*#__PURE__*/React.createElement(RecentActivityCard, {
-      activity: activity
+      sessions: sessionsList
     })));
   }
   function renderMemory() {
@@ -1367,7 +1652,7 @@ function DashboardApp() {
         font: 'var(--text-headline-md)',
         color: 'var(--amber)'
       }
-    }, memoryEntries.length)), /*#__PURE__*/React.createElement("div", {
+    }, memoryData.stats.total_entries)), /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         justifyContent: 'space-between',
@@ -1384,11 +1669,12 @@ function DashboardApp() {
         font: 'var(--text-code)',
         color: 'var(--text-primary)'
       }
-    }, hasEntries ? memoryEntries[0].timestamp : '—'))), /*#__PURE__*/React.createElement(RecentActivityCard, {
-      activity: activity
+    }, memoryData.stats.last_write || '—'))), /*#__PURE__*/React.createElement(RecentActivityCard, {
+      sessions: sessionsList
     })));
   }
   function renderProtocols() {
+    const protocols = protocolsData.protocols;
     return /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'grid',
@@ -1402,8 +1688,8 @@ function DashboardApp() {
         flexDirection: 'column',
         gap: 16
       }
-    }, protocolDefs.map(p => /*#__PURE__*/React.createElement("div", {
-      key: p.id,
+    }, protocols.length ? protocols.map(p => /*#__PURE__*/React.createElement("div", {
+      key: p.filename,
       style: {
         background: 'var(--surface-card)',
         border: '1px solid var(--potato)',
@@ -1412,12 +1698,8 @@ function DashboardApp() {
         display: 'flex',
         flexDirection: 'column',
         gap: 12,
-        cursor: 'pointer'
-      },
-      onClick: () => setExpanded(s => ({
-        ...s,
-        [p.id]: !s[p.id]
-      }))
+        opacity: p.enabled ? 1 : 0.55
+      }
     }, /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
@@ -1431,32 +1713,62 @@ function DashboardApp() {
       style: {
         margin: 0,
         font: 'var(--text-headline-sm)',
-        color: 'var(--text-primary)'
+        color: 'var(--text-primary)',
+        cursor: 'pointer'
+      },
+      onClick: () => setExpanded(s => ({
+        ...s,
+        [p.filename]: !s[p.filename]
+      }))
+    }, p.title), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12
       }
-    }, p.title), /*#__PURE__*/React.createElement("span", {
+    }, /*#__PURE__*/React.createElement(Toggle, {
+      checked: p.enabled,
+      onChange: enabled => handleProtocolToggle(p.filename, enabled)
+    }), /*#__PURE__*/React.createElement("span", {
       className: "material-symbols-outlined",
       style: {
         color: 'var(--potato)',
-        fontSize: 20
-      }
-    }, expanded[p.id] ? 'expand_less' : 'expand_more')), /*#__PURE__*/React.createElement("p", {
+        fontSize: 20,
+        cursor: 'pointer'
+      },
+      onClick: () => setExpanded(s => ({
+        ...s,
+        [p.filename]: !s[p.filename]
+      }))
+    }, expanded[p.filename] ? 'expand_less' : 'expand_more'))), /*#__PURE__*/React.createElement("p", {
       style: {
         font: 'var(--text-body-sm)',
         margin: 0,
         color: 'var(--text-secondary)'
       }
-    }, p.summary), expanded[p.id] ? /*#__PURE__*/React.createElement("div", {
+    }, p.summary), expanded[p.filename] ? /*#__PURE__*/React.createElement("div", {
       style: {
         borderTop: '1px solid var(--border)',
         paddingTop: 12
       }
-    }, /*#__PURE__*/React.createElement("p", {
+    }, /*#__PURE__*/React.createElement("pre", {
       style: {
         font: 'var(--text-code)',
+        fontSize: 12,
         margin: 0,
-        color: 'var(--error)'
+        color: 'var(--text-secondary)',
+        whiteSpace: 'pre-wrap',
+        fontFamily: 'inherit'
       }
-    }, `Content not found — check file path (${p.filename}).`)) : null))), /*#__PURE__*/React.createElement("div", {
+    }, p.body)) : null)) : /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement("p", {
+      style: {
+        font: 'var(--text-body-sm)',
+        margin: 0,
+        color: 'var(--text-secondary)',
+        textAlign: 'center',
+        padding: '24px 0'
+      }
+    }, `No protocol files found in persona/protocols/.`))), /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         flexDirection: 'column',
@@ -1508,7 +1820,7 @@ function DashboardApp() {
         font: 'var(--text-headline-md)',
         color: 'var(--potato)'
       }
-    }, protocolDefs.length)), /*#__PURE__*/React.createElement("ul", {
+    }, `${protocolsData.active_count} / ${protocols.length}`)), /*#__PURE__*/React.createElement("ul", {
       style: {
         listStyle: 'none',
         margin: 0,
@@ -1520,11 +1832,12 @@ function DashboardApp() {
         fontSize: 12,
         color: 'var(--text-secondary)'
       }
-    }, protocolDefs.map(p => /*#__PURE__*/React.createElement("li", {
-      key: p.id,
+    }, protocols.map(p => /*#__PURE__*/React.createElement("li", {
+      key: p.filename,
       style: {
         display: 'flex',
-        gap: 8
+        gap: 8,
+        opacity: p.enabled ? 1 : 0.5
       }
     }, /*#__PURE__*/React.createElement("span", {
       style: {
@@ -1532,53 +1845,81 @@ function DashboardApp() {
       }
     }, ">"), p.filename))))));
   }
-  function renderTerminal() {
+  function renderSettings() {
+    const totalProtocols = protocolsData.protocols.length;
+    const allProtocolsOn = totalProtocols > 0 && protocolsData.active_count === totalProtocols;
+    const noProtocolsOn = protocolsData.active_count === 0;
+    let masterDescription = 'Every protocol is currently on.';
+    if (noProtocolsOn) {
+      masterDescription = 'Every protocol is currently off.';
+    } else if (!allProtocolsOn) {
+      masterDescription = `${protocolsData.active_count} of ${totalProtocols} protocols on -- flip to turn them all on.`;
+    }
     return /*#__PURE__*/React.createElement("div", {
       style: {
-        display: 'flex',
-        flexDirection: 'column',
-        height: 'calc(100vh - 200px)'
+        display: 'grid',
+        gridTemplateColumns: '7fr 5fr',
+        gap: 24,
+        alignItems: 'start'
       }
     }, /*#__PURE__*/React.createElement("div", {
-      ref: scrollRef,
       style: {
-        flex: 1,
-        overflowY: 'auto',
         display: 'flex',
         flexDirection: 'column',
-        gap: 10,
-        padding: '8px 4px 24px'
+        gap: 24
       }
-    }, scrollback.map((line, i) => line.isCommand ? /*#__PURE__*/React.createElement("div", {
-      key: i,
+    }, /*#__PURE__*/React.createElement(ApiKeyCard, {
+      keyPresent: keyPresent,
+      onChanged: refreshStatus
+    }), /*#__PURE__*/React.createElement(Card, {
+      title: "Default Claude Model",
+      icon: "smart_toy",
+      accent: "amber"
+    }, /*#__PURE__*/React.createElement("select", {
+      value: claudeModel,
+      onChange: e => handleModelChange(e.target.value),
+      style: {
+        width: '100%',
+        background: 'var(--bg-void)',
+        border: '1px solid var(--border)',
+        color: 'var(--text-primary)',
+        font: 'var(--text-code)',
+        padding: 8,
+        borderRadius: 4
+      }
+    }, CLAUDE_MODEL_OPTIONS.map(opt => /*#__PURE__*/React.createElement("option", {
+      key: opt.value,
+      value: opt.value
+    }, opt.label))), /*#__PURE__*/React.createElement("p", {
       style: {
         font: 'var(--text-code)',
-        color: 'var(--text-primary)'
-      }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        color: 'var(--amber)'
-      }
-    }, ">"), " ", line.text) : /*#__PURE__*/React.createElement("div", {
-      key: i,
-      style: {
-        font: 'var(--text-code)',
+        fontSize: 11,
         color: 'var(--text-secondary)',
-        paddingLeft: 16
+        margin: '6px 0 0'
       }
-    }, line.text))), /*#__PURE__*/React.createElement("div", {
+    }, "Used whenever Claude is the active provider -- same setting as the Presence Claude Model card.")), /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement(Toggle, {
+      checked: reviewerOn,
+      onChange: handleReviewerToggle,
+      label: "Reviewer Mode",
+      description: "Off: Ollama (local, free) — On: Claude (billed to your key)"
+    }))), /*#__PURE__*/React.createElement("div", {
       style: {
-        padding: '12px 0 0'
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 24
       }
-    }, /*#__PURE__*/React.createElement(TerminalInput, {
-      value: terminalValue,
-      onChange: e => setTerminalValue(e.target.value),
-      onSubmit: handleTerminalSubmit,
-      placeholder: "Enter command sequence...",
-      style: {
-        transform: 'scale(1.08)',
-        transformOrigin: 'left center'
-      }
+    }, /*#__PURE__*/React.createElement(Card, {
+      title: "All Protocols",
+      icon: "security",
+      accent: "amber"
+    }, /*#__PURE__*/React.createElement(Toggle, {
+      checked: allProtocolsOn,
+      onChange: handleProtocolsBulkToggle,
+      label: "Master Switch",
+      description: masterDescription
+    })), /*#__PURE__*/React.createElement(RootBeerGauge, {
+      limit: rateLimit ? rateLimit.limit : null,
+      remaining: rateLimit ? rateLimit.remaining : null
     })));
   }
   function renderHardware() {
@@ -1598,52 +1939,21 @@ function DashboardApp() {
         overflowY: 'auto',
         paddingRight: 4
       }
-    }, devices.map((d, i) => /*#__PURE__*/React.createElement(Card, {
-      key: i,
-      title: d.name,
-      icon: "memory",
-      accent: "amber"
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        gap: 16
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 6
-      }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        font: 'var(--text-label-caps)',
-        color: 'var(--sage)',
-        letterSpacing: '.05em'
-      }
-    }, d.category), /*#__PURE__*/React.createElement("span", {
+    }, /*#__PURE__*/React.createElement(AddDeviceCard, {
+      onChanged: refreshDevices
+    }), devicesList.length ? devicesList.map(d => /*#__PURE__*/React.createElement(DeviceCard, {
+      key: d.id,
+      device: d,
+      onChanged: refreshDevices
+    })) : /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement("p", {
       style: {
         font: 'var(--text-body-sm)',
-        color: 'var(--text-primary)'
+        margin: 0,
+        color: 'var(--text-secondary)',
+        textAlign: 'center',
+        padding: '24px 0'
       }
-    }, d.spec), /*#__PURE__*/React.createElement("span", {
-      style: {
-        font: 'var(--text-body-sm)',
-        color: 'var(--text-secondary)'
-      }
-    }, d.role), d.aside ? /*#__PURE__*/React.createElement("span", {
-      style: {
-        font: 'var(--text-code)',
-        fontSize: 12,
-        color: 'var(--sage)',
-        fontStyle: 'italic'
-      }
-    }, d.aside) : null), /*#__PURE__*/React.createElement(StatusDot, {
-      status: d.dotStatus,
-      label: d.dotLabel,
-      glow: d.active
-    }))))), /*#__PURE__*/React.createElement("div", {
+    }, "No devices yet. Add the first one above."))), /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         flexDirection: 'column',
@@ -1657,44 +1967,63 @@ function DashboardApp() {
       style: {
         display: 'flex',
         flexDirection: 'column',
-        gap: 14,
-        maxHeight: 480,
+        gap: 18,
+        maxHeight: 'calc(100vh - 220px)',
         overflowY: 'auto'
       }
-    }, newsFeed.map((n, i) => /*#__PURE__*/React.createElement("div", {
-      key: i,
+    }, newsData.map((source, si) => /*#__PURE__*/React.createElement("div", {
+      key: si
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        font: 'var(--text-label-caps)',
+        color: 'var(--amber)',
+        letterSpacing: '.05em',
+        marginBottom: 8
+      }
+    }, source.source), source.items.length ? source.items.map((item, ii) => /*#__PURE__*/React.createElement("div", {
+      key: ii,
       style: {
         display: 'flex',
         flexDirection: 'column',
         gap: 4,
         paddingBottom: 12,
+        marginBottom: 12,
         borderBottom: '1px solid var(--border)'
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        gap: 12
       }
     }, /*#__PURE__*/React.createElement("span", {
       style: {
         font: 'var(--text-label)',
-        color: 'var(--amber)'
+        color: 'var(--text-primary)'
       }
-    }, n.title), /*#__PURE__*/React.createElement("span", {
-      style: {
-        font: 'var(--text-code)',
-        fontSize: 11,
-        color: 'var(--text-secondary)',
-        whiteSpace: 'nowrap'
-      }
-    }, n.timestamp)), /*#__PURE__*/React.createElement("p", {
+    }, item.title), /*#__PURE__*/React.createElement("p", {
       style: {
         font: 'var(--text-body-sm)',
         margin: 0,
         color: 'var(--text-secondary)'
       }
-    }, n.summary)))))));
+    }, item.summary), /*#__PURE__*/React.createElement("a", {
+      href: item.link,
+      target: "_blank",
+      rel: "noopener noreferrer",
+      style: {
+        alignSelf: 'flex-start',
+        marginTop: 4,
+        padding: '4px 12px',
+        border: '1px solid var(--amber)',
+        color: 'var(--amber)',
+        font: 'var(--text-code)',
+        fontSize: 11,
+        borderRadius: 4,
+        textDecoration: 'none'
+      }
+    }, "Read →"))) : /*#__PURE__*/React.createElement("p", {
+      style: {
+        font: 'var(--text-code)',
+        fontSize: 11,
+        color: 'var(--error)',
+        margin: '0 0 12px'
+      }
+    }, source.error ? `Couldn't reach this source: ${source.error}` : "No items right now.")))))));
   }
   return /*#__PURE__*/React.createElement("div", {
     style: {
@@ -1706,7 +2035,8 @@ function DashboardApp() {
   }, /*#__PURE__*/React.createElement(Sidebar, {
     activeTab: activeTab,
     onNavigate: setActiveTab,
-    onReboot: handleReboot
+    onReboot: handleReboot,
+    statusLine: sidebarStatusLine
   }), /*#__PURE__*/React.createElement("main", {
     style: {
       flex: 1,
@@ -1737,7 +2067,7 @@ function DashboardApp() {
     status: "success",
     label: "LINK ACTIVE",
     glow: true
-  })), isPresence ? renderPresence() : null, isMemory ? renderMemory() : null, isProtocols ? renderProtocols() : null, isTerminal ? renderTerminal() : null, isHardware ? renderHardware() : null));
+  })), isPresence ? renderPresence() : null, isMemory ? renderMemory() : null, isProtocols ? renderProtocols() : null, isSettings ? renderSettings() : null, isHardware ? renderHardware() : null));
 }
 Object.assign(__ds_scope, { DashboardApp });
 __ds_ns.DashboardApp = DashboardApp;

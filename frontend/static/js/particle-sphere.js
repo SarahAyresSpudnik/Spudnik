@@ -270,6 +270,10 @@ function OriginkitParticleSphere(__props) {
         Vector3,
         AdditiveBlending,
       } = THREE;
+      // Disable automatic sRGB<->linear color management -- it was silently
+      // darkening baseColorObj/spotColor (fed straight into the instanceColor
+      // buffer as raw multipliers) well below the actual amber/brown hex values.
+      if (THREE.ColorManagement) THREE.ColorManagement.enabled = false;
 
       const containerWidth =
         container.clientWidth || container.offsetWidth || 400;
