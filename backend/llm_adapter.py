@@ -1,5 +1,4 @@
 import os
-from xmlrpc import client
 
 from reviewer_mode import is_reviewer_mode
 
@@ -32,9 +31,23 @@ def get_response(message, session_id, mode="default"):
 
     # if the provider is set to ollama
     if provider == "ollama":
-        # this is where real Ollama connection logic goes later --
-        # system_prompt will need to be passed in here too, once that branch is built
-        reply = "STUB: ollama path was called"
+        from ollama import Client
+
+        # host defaults to localhost for now -- swap OLLAMA_HOST when
+        # you're set up for remote access later, no code changes needed
+        ollama_client = Client(host=os.getenv("OLLAMA_HOST", "http://localhost:11434"))
+
+        history = get_recent_messages(session_id)
+        history.append({"role": "user", "content": message})
+
+        response = ollama_client.chat(
+            model=os.getenv("OLLAMA_MODEL", "qwen3"),
+            messages=[{"role": "system", "content": system_prompt}] + history,
+            keep_alive="30m",
+            think=False,
+            options={"num_predict": 512},
+        )
+        reply = response["message"]["content"]
 
     # if Provider is set to claude
     elif provider == "claude":
